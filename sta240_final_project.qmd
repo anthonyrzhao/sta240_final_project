@@ -1,5 +1,7 @@
 ---
-title: "sta240_final_project"
+title: "STA240 Final Project"
+format: pdf
+author: "Anthony Zhao, Abby Li, William Yan"
 ---
 
 ## Quarto
