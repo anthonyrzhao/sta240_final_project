@@ -4,10 +4,60 @@ format: pdf
 author: "Anthony Zhao, Abby Li, William Yan"
 ---
 
-## Quarto
+## Scenario 1
 
 Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
 
-```{r}
-1 + 1
+```{r arrival times}
+
+# simulating the arrival times of customers throughout the day
+
+# Poisson process (lambda = 5)
+# Tk= arrival time of the kth customer
+# Wk= time between the k-1th customer arrival and the kth customer arrival where Wk ~ Pois(lambda)
+
+# set parameter
+lambdaA <- 5 # in units: customers per hour
+hours <- 12 # operating hours: 10am to 10pm
+total_time <- hours*60 # operating hours in minutes
+lambdaA <- 5/60 # customers per minute
+# converting to minutes because our lambda is low, and we can can get greater precision in analyses this way
+
+n <- ceiling(lambdaA*total_time) # max number of customers the store can have throughout the day
+
+# generate W1,..,Wn (calculating the time between the arrival times of 2 customers)
+W_sample <- rexp(n, rate= lambdaA)
+
+# calculate T or the arrival times by summing together the Wi arrival times
+
+T_sample <- numeric(n)
+
+for(i in 1:n) {
+  T_sample[i] <- sum(W_sample[1:i])
+}
+
+T_sample # these are all possible arrival times of customers throughout the day (X minutes after opening)
+
+# however, the store is only open for 12 hours or 720 minutes so we must get rid of the values that fall outside of the range (go beyond 720)
+
+T_sample <- T_sample[T_sample <= total_time]
+
+T_sample
+
 ```
+
+```{r serving-times}
+# given the output from above, simulate the serving times of customers before they leave
+
+# notice that service time is modeled by exp(6)
+lambdaS <- 6 # customers per hour
+lambdaS <- 6/60 # customers per minute 
+
+# simulate customer's service time 
+# n= only simulating the service time for those where T_sample <= total_time
+service_time <- rexp(length(T_sample), rate= lambdaS)
+
+service_time #these are the serving times for each arriving customer before they leave
+
+```
+
