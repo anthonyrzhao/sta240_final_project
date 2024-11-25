@@ -6,6 +6,28 @@ author: "Anthony Zhao, Abby Li, William Yan"
 
 ## Scenario 1
 
+### Customer Arrival
+
+Poisson process (rate = $\lambda$)
+
+- $T_k$: Arrival time of the $k$th customer
+
+- $W_k$: Time between the $k-1$th arrival and the $k$th arrival
+
+$$
+  W_k = T_k - T_{k-1}.
+$$
+
+$W_k \sim Pois(\lambda)$
+
+where lambda = 5
+
+### Service Time
+
+$S_k \sim Exp(\lambda)$
+
+where lambda = 6
+
 ## Arrival Times
 
 ```{r arrival times}
@@ -36,7 +58,7 @@ for(i in 1:n) {
   T_sample[i] <- sum(W_sample[1:i])
 }
 
-T_sample # these are all possible arrival times of customers throughout the day (X minutes after opening)
+# all possible arrival times of customers throughout the day (X minutes after opening)
 
 # however, the store is only open for 12 hours or 720 minutes so we must get rid of the values that fall outside of the range (go beyond 720)
 
@@ -45,6 +67,16 @@ arrival_times <- T_sample[T_sample <= total_time]
 arrival_times
 
 ```
+
+### Arrival Times Analysis
+
+```{r}
+length(arrival_times) # 55 customers
+mean(arrival_times) # 323 mins, 5.4 hours
+min(arrival_times) # 10 mins
+max(arrival_times) # 711 mins, 11.8 hours
+```
+In this simulation, the number of customers that will be arriving within the operating hours is 55, with the first customer arriving 10 minutes after opening (~10:10 am) and the last customer arriving 11.8 hours into the workday (~9:48 pm).
 
 ## Serving Times
 
@@ -62,6 +94,15 @@ service_times <- rexp(length(arrival_times), rate= lambdaS)
 service_times #these are the serving times for each arriving customer before they leave
 
 ```
+
+### Serving Times Analysis
+
+```{r service-times-graph}
+boxplot(service_times, horizontal= TRUE, main= "Service Times", xlab= "Minutes")
+mean(service_times) # 8.5 mins
+```
+
+The average service time is 8.5 minutes, with the data skewed right, consistent with an exponential distribution. This indicates that service times tend to lower. 
 
 ## Waiting Times
 
@@ -104,7 +145,7 @@ for (i in 1:length(arrival_times)) {
   service_end[i] <- service_start[i] + service_times[i]
   
   # add this service end time to current end services
-  current_end <- c( current_end , service_end[i])
+  current_end <- c(current_end , service_end[i])
   
   # update waiting time
   waiting_times[i] <- service_start[i] - arrival_times[i]
@@ -120,6 +161,14 @@ simulation_results <- data.frame(
   waiting_time = waiting_times
 )
 
-simulation_results
+print(head(simulation_results, 15)) # printing first 15 customers
 
 ```
+
+```{r waiting-times-dist}
+boxplot(waiting_times, horizontal= TRUE, main= "Waiting Times", xlab= "Minutes")
+mean(waiting_times)
+```
+
+Waiting times tend to be short, if not zero, and on average, the waiting time is around 5 minutes. 
+
