@@ -6,7 +6,7 @@ author: "Anthony Zhao, Abby Li, William Yan"
 
 ## Scenario 1
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+## Arrival Times
 
 ```{r arrival times}
 
@@ -40,11 +40,13 @@ T_sample # these are all possible arrival times of customers throughout the day 
 
 # however, the store is only open for 12 hours or 720 minutes so we must get rid of the values that fall outside of the range (go beyond 720)
 
-T_sample <- T_sample[T_sample <= total_time]
+arrival_times <- T_sample[T_sample <= total_time]
 
-T_sample
+arrival_times
 
 ```
+
+## Serving Times
 
 ```{r serving-times}
 # given the output from above, simulate the serving times of customers before they leave
@@ -55,9 +57,69 @@ lambdaS <- 6/60 # customers per minute
 
 # simulate customer's service time 
 # n= only simulating the service time for those where T_sample <= total_time
-service_time <- rexp(length(T_sample), rate= lambdaS)
+service_times <- rexp(length(arrival_times), rate= lambdaS)
 
-service_time #these are the serving times for each arriving customer before they leave
+service_times #these are the serving times for each arriving customer before they leave
 
 ```
 
+## Waiting Times
+
+```{r customer-service}
+
+# determining waiting times
+
+# for each observation (customer), calculate when the service begins and when it ends 
+# serving ends = service begins + service time
+# service begins: either when the customer walks in, or when the previous customer leaves (assumes there is a waiting time)
+
+# compare this to the arrival time 
+# if arrival time > time service ends then wait time = 0
+# but if arrival time < service time ends then wait time = time service ends- arrival time 
+
+# variable initialization
+waiting_times <- numeric(length(arrival_times))  # generating times for each customer
+service_start <- numeric(length(arrival_times)) 
+service_end <- numeric(length(arrival_times))  
+current_end <- numeric(0) # service end time for current customer (i)
+
+# iterate over each customer
+for (i in 1:length(arrival_times)) {
+
+  # only includes observations where service time > arrival time => which means there is a wait time
+  # gets rid of observations where service < arrival time => 0 wait time
+  if (length(current_end) > 0) {
+    current_end <- current_end[current_end > arrival_times[i]]
+  }
+  
+ if (length(current_end) == 0) {
+   # scenario 1: if there is no waiting time, service starts at the customer arrival
+    service_start[i] <- arrival_times[i]
+  } else {
+    # scenario 2: if there is a waiting time, service starts at the end of the previous customer's end time
+    service_start[i] <- min(current_end)
+  }
+  
+  # update the service end time for current customer by adding when service starts and how long the service takes
+  service_end[i] <- service_start[i] + service_times[i]
+  
+  # add this service end time to current end services
+  current_end <- c( current_end , service_end[i])
+  
+  # update waiting time
+  waiting_times[i] <- service_start[i] - arrival_times[i]
+}
+
+
+simulation_results <- data.frame(
+  customer = 1:length(arrival_times),
+  arrival_time = arrival_times,
+  service_length = service_times,
+  service_start = service_start,
+  service_end = service_end,
+  waiting_time = waiting_times
+)
+
+simulation_results
+
+```
