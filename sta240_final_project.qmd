@@ -2,17 +2,20 @@
 title: "STA240 Final Project"
 format: pdf
 author: "Anthony Zhao, Abby Li, William Yan"
+editor: 
+  markdown: 
+    wrap: 72
 ---
 
-## Scenario 1
+# Scenario 1
 
 ### Customer Arrival
 
 Poisson process (rate = $\lambda$)
 
-- $T_k$: Arrival time of the $k$th customer
+-   $T_k$: Arrival time of the $k$th customer
 
-- $W_k$: Time between the $k-1$th arrival and the $k$th arrival
+-   $W_k$: Time between the $k-1$th arrival and the $k$th arrival
 
 $$
   W_k = T_k - T_{k-1}.
@@ -20,17 +23,19 @@ $$
 
 $W_k \sim Pois(\lambda)$
 
-where lambda = 5
+where $\lambda = 5$ customers per hour
 
 ### Service Time
 
 $S_k \sim Exp(\lambda)$
 
-where lambda = 6
+where $\lambda = 6$ customers per hour, so the average customer needs to
+wait 1/6 hours = 10 minutes.
 
 ## Arrival Times
 
-```{r arrival times}
+```{r arrival-times, message=F, warning=F}
+library(tidyverse)
 
 # simulating the arrival times of customers throughout the day
 
@@ -40,9 +45,11 @@ where lambda = 6
 
 # set parameter
 lambdaA <- 5 # in units: customers per hour
-hours <- 12 # operating hours: 10am to 10pm
+opening_time <- hm("10:00")
+closing_time <- hm("22:00")
+hours <- hour(closing_time) - hour(opening_time) # operating hours: 10am to 10pm
 total_time <- hours*60 # operating hours in minutes
-lambdaA <- 5/60 # customers per minute
+lambdaA <- lambdaA/60 # customers per minute
 # converting to minutes because our lambda is low, and we can can get greater precision in analyses this way
 
 n <- ceiling(lambdaA*total_time) # max number of customers the store can have throughout the day
@@ -66,17 +73,17 @@ arrival_times <- T_sample[T_sample <= total_time]
 
 arrival_times
 
+opening_time + minutes(floor(max(arrival_times)))
+
 ```
 
 ### Arrival Times Analysis
 
-```{r}
-length(arrival_times) # 55 customers
-mean(arrival_times) # 323 mins, 5.4 hours
-min(arrival_times) # 10 mins
-max(arrival_times) # 711 mins, 11.8 hours
-```
-In this simulation, the number of customers that will be arriving within the operating hours is 55, with the first customer arriving 10 minutes after opening (~10:10 am) and the last customer arriving 11.8 hours into the workday (~9:48 pm).
+In this simulation, the number of customers that will be arriving within
+the operating hours is `r length(arrival_times)`, with the first
+customer arriving `r floor(min(arrival_times))` minutes after opening
+and the last customer arriving
+`r ceiling(total_time - max(arrival_times))` minutes before closing
 
 ## Serving Times
 
@@ -85,13 +92,14 @@ In this simulation, the number of customers that will be arriving within the ope
 
 # notice that service time is modeled by exp(6)
 lambdaS <- 6 # customers per hour
-lambdaS <- 6/60 # customers per minute 
+lambdaS <- lambdaS/60 # customers per minute 
 
 # simulate customer's service time 
 # n= only simulating the service time for those where T_sample <= total_time
 service_times <- rexp(length(arrival_times), rate= lambdaS)
 
-service_times #these are the serving times for each arriving customer before they leave
+#these are the serving times for each arriving customer before they leave
+service_times 
 
 ```
 
@@ -99,10 +107,11 @@ service_times #these are the serving times for each arriving customer before the
 
 ```{r service-times-graph}
 boxplot(service_times, horizontal= TRUE, main= "Service Times", xlab= "Minutes")
-mean(service_times) # 8.5 mins
 ```
 
-The average service time is 8.5 minutes, with the data skewed right, consistent with an exponential distribution. This indicates that service times tend to lower. 
+The average service time is `r round(mean(service_times))` minutes, with
+the data skewed right, consistent with an exponential distribution. This
+indicates that service times tend to lower.
 
 ## Waiting Times
 
@@ -170,5 +179,153 @@ boxplot(waiting_times, horizontal= TRUE, main= "Waiting Times", xlab= "Minutes")
 mean(waiting_times)
 ```
 
-Waiting times tend to be short, if not zero, and on average, the waiting time is around 5 minutes. 
+Waiting times tend to be short, if not zero, and on average, the waiting
+time is on average `r round(mean(waiting_times))` minutes.
 
+# Scenario 2
+
+## Arrival and Service
+
+Assumptions:
+
+1.  5 dining tables and L chefs with operating hours 10am - 10pm
+
+2.  each table only seats one customer
+
+3.  service time modeled by an exponential distribution with rate λS =
+    3L, so that the more chefs there are, the faster the service times
+    become **(this is not very realistic)**
+
+```{r arrival-service-2}
+# first, we generate the arrival times similar in scenario 1
+lambdaA <- 24 # per hour
+opening_time <- hm("10:00")
+closing_time <- hm("22:00")
+hours <- hour(closing_time) - hour(opening_time)
+total_time <- hours*60 # operating hours in minutes
+lambdaA <- lambdaA/60 # per minute
+
+n <- ceiling(lambdaA*total_time) # max number of customers
+W_sample <- rexp(n, rate= lambdaA)
+T_sample <- numeric(n)
+
+for(i in 1:n) {
+  T_sample[i] <- sum(W_sample[1:i])
+}
+
+arrival_times <- T_sample[T_sample <= total_time]
+
+# next, we generate the service times similar to scenario 1
+# make a function to do this
+calc_service_times <- function(arrivals, chefs) {
+  # Ensure rate is per unit time
+  minute_rate = (3*chefs) / 60
+  services = rexp(length(arrivals), rate = minute_rate)
+  return(services) # in minutes
+}
+# if we only have one chef
+service_times <- calc_service_times(arrivals = arrival_times, chefs = 2)
+```
+
+## Waiting Times
+
+To model waiting times, we iterate through the day minute by minute.
+
+```{r waiting-2}
+
+tables <- 5
+arrival_times_temp <- arrival_times
+
+# number of people in line each minute
+queue_size_history <- numeric(total_time)
+
+# number of tables occupied each minute
+occupied_tables_history <- rep(0, total_time)
+
+# timer to track remaining waiting time for each table in the restaurant
+# each element is one table in the restaurant
+# -1 means empty
+# otherwise, number of remaining service minutes
+tables_timer <- rep(-1, tables)
+
+# the amount of minutes each customer of that day waited
+waiting_times <- numeric(0)
+
+# the arrival_times indices of the people currently in line
+# in order to know how long their eventual service time will be
+queue <- numeric(0)
+
+# an internal counter separate from the time
+customers_entered <- 0
+for (i in 1:total_time) {
+  occupied_tables_history[i+1] = occupied_tables_history[i]
+  
+  # update the waiting timer for all occupied tables
+  tables_timer[tables_timer > 0] <- tables_timer[tables_timer > 0] - 1
+  # update the number of available tables in the next minute
+  # based on the number of tables who have finished timers
+  occupied_tables_history[i+1] = occupied_tables_history[i+1] - sum(tables_timer == 0)
+  # mark the finished tables as available tables for the next minute
+  tables_timer[tables_timer == 0] <- tables_timer[tables_timer == 0] - 1
+  
+  # has the next customer arrived?
+  if(length(arrival_times_temp) > 0){
+    if(arrival_times_temp[1] < i) {
+      # if so, add them to the back of the queue
+      queue = c(queue, as.integer(customers_entered+1)) # add 1 for 1-indexing
+      # remove the 1st element of arrival_times
+      arrival_times_temp = arrival_times_temp[-1]
+      # start the waiting timer for this customer by appending 0
+      waiting_times = c(waiting_times, 0)
+      
+      customers_entered = customers_entered + 1
+    }
+  }
+  # are any tables currently open and there is a person in line?
+  if(occupied_tables_history[i+1] < tables & length(queue) > 0) {
+    # if so, then seat the first person in line
+    # at the first available table
+    for (j in 1:tables) {
+      if(tables_timer[j] == -1) {
+        # queue[1] has the customer index of the first person in line
+        tables_timer[j] = round(service_times[queue[1]])
+        break
+      }
+    }
+    # the next minute there will be one more occupied table
+    occupied_tables_history[i+1] = occupied_tables_history[i+1] + 1
+    # remove the first person in the queue
+    queue = queue[-1]
+  }
+  # update the waiting time for each person in the queue
+  for (customer_index in queue) {
+    waiting_times[customer_index] = waiting_times[customer_index] + 1
+  }
+  # keep track of how long the line is at each minute
+  queue_size_history[i] = length(queue)
+}
+
+queue_size_history <- queue_size_history[-1]
+occupied_tables_history <- occupied_tables_history[-1]
+
+queue_size_history
+occupied_tables_history
+waiting_times
+```
+Make plots using these three pieces of data? Tracked across each day
+How do the queueing times look?
+
+## Restaurant Profits
+
+Assumptions:
+
+1.  each customer spends \$50 per meal (customers who are still in the queue when the restaurant closes won't pay)
+
+2.  each chef earns a wage of \$40 per hour (paid for the entire duration of the restaurant's operating hours)
+
+### Maximizing Profits
+Should we run this simulation multiple times to create a PDF of the total daily profits?
+How many chefs should we hire?
+
+## Down-time of Restaurant
+How does the occupancy of the restaurant vary throughout the day? Does that inform any of our recommendations?
