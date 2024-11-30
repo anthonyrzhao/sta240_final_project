@@ -36,6 +36,7 @@ wait 1/6 hours = 10 minutes.
 
 ```{r arrival-times, message=F, warning=F}
 library(tidyverse)
+library(lubridate)
 
 # simulating the arrival times of customers throughout the day
 
@@ -380,18 +381,22 @@ scen2_sim_results_by_minute |>
 
 ```
 
-
 ## Restaurant Profits
 
 Assumptions:
 
-1.  each customer spends \$50 per meal (customers who are still in the queue when the restaurant closes won't pay)
+1.  each customer spends \$50 per meal (customers who are still in the
+    queue when the restaurant closes won't pay)
 
-2.  each chef earns a wage of \$40 per hour (paid for the entire duration of the restaurant's operating hours)
+2.  each chef earns a wage of \$40 per hour (paid for the entire
+    duration of the restaurant's operating hours)
 
 ### Maximizing Profits
-Should we run this simulation multiple times to create a PDF of the total daily profits?
-How many chefs should we hire?
+
+Should we run this simulation multiple times to create a PDF of the
+total daily profits? How many chefs should we hire?
 
 ## Down-time of Restaurant
-How does the occupancy of the restaurant vary throughout the day? Does that inform any of our recommendations?
+
+How does the occupancy of the restaurant vary throughout the day? Does
+that inform any of our recommendations?
