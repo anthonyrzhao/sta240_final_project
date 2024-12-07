@@ -167,7 +167,8 @@ for (i in 1:length(arrival_times)) {
     service_start[i] <- arrival_times[i]
   } else {
     # scenario 2: if there is a waiting time, service starts at the end of the previous customer's end time
-    service_start[i] <- max(arrival_times[i], service_end[i-1])
+    previous_end <- service_end[i - 1]
+    service_start[i] <- max(arrival_times[i], previous_end)
   }
   
   # update the service end time for current customer by adding when service starts and how long the service takes
