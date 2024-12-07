@@ -491,22 +491,7 @@ scen2_sim_results_by_minute |>
   theme_minimal() +
   theme(panel.grid.minor = element_blank())
 
-scen2_sim_results_by_minute |>
-  ggplot(aes(x = minutes_since_opening, y = occupied_tables)) +
-  geom_area(fill = "lightblue") +
-  geom_line() +
-  scale_y_continuous(breaks = seq(1, tables, by = 1)) +
-  scale_x_continuous(breaks = seq(0, total_time, by = 60)) +
-  labs(
-    x = "Minutes Since Opening",
-    y = "Number of Tables Occupied"
-  ) +
-  theme_minimal() +
-  theme(panel.grid.minor = element_blank())
-
-
 ```
-
 
 ## Restaurant Profits
 
@@ -595,3 +580,205 @@ total daily profits? How many chefs should we hire?
 
 How does the occupancy of the restaurant vary throughout the day? Does
 that inform any of our recommendations?
+
+# Scenario 3
+
+```{r}
+simulate_differential_arrival_times <- function(
+    lunch_peak_start,lunch_peak_end,
+    dinner_peak_start, dinner_peak_end,
+    lambda_down, lambda_peak, total_time
+) {
+  # Convert arrival rates to per minute
+  rate_down <- lambda_down / 60
+  rate_peak <- lambda_peak / 60
+  
+  # Convert peak times to minutes from opening
+  lunch_peak_start_min <- as.numeric(as.duration(lunch_peak_start - opening_time), units = "minutes")
+  lunch_peak_end_min <- as.numeric(as.duration(lunch_peak_end - opening_time), units = "minutes")
+  
+  dinner_peak_start_min <- as.numeric(as.duration(dinner_peak_start - opening_time), units = "minutes")
+  dinner_peak_end_min <- as.numeric(as.duration(dinner_peak_end - opening_time), units = "minutes")
+  
+  # Initialize list to store arrival times
+  arrival_times <- numeric()
+  current_time <- 0  # Start at 0 minutes (opening time)
+  
+  # Generate arrival times
+  while (current_time < total_time) {
+    # Determine the arrival rate based on current time
+    if ((current_time >= lunch_peak_start_min && current_time < lunch_peak_end_min) ||
+        (current_time >= dinner_peak_start_min && current_time < dinner_peak_end_min)) {
+      arrival_rate <- rate_peak  # Peak time rate
+    } else {
+      arrival_rate <- rate_down  # Downtime rate
+    }
+    
+    # Generate the next interarrival time from the exponential distribution
+    next_arrival <- rexp(1, arrival_rate)
+    
+    # Update the current time
+    current_time <- current_time + next_arrival
+    
+    # If within the operating hours, add the arrival time to the list
+    if (current_time < total_time) {
+      arrival_times <- c(arrival_times, current_time)
+    }
+  }
+  
+  # Return arrival_times
+  return(arrival_times)
+}
+
+arrival_times <- simulate_differential_arrival_times(
+  lunch_peak_start = hm("12:00"),
+  lunch_peak_end = hm("14:00"), 
+  dinner_peak_start = hm("18:00"),
+  dinner_peak_end = hm("20:00"), 
+  lambda_down = 6, lambda_peak = 60, total_time = total_time)
+
+ggplot(data = data.frame(arrival_times), aes(x = arrival_times)) +
+  geom_histogram(binwidth = 10, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Histogram of Customer Arrival Times",
+    x = "Time of Day (Hours)",
+    y = "Number of Arrivals"
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 720, by = 30)
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+
+restaurant_sim <- function(arrivals, chefs, tables, minutes) {
+  # calculate service times
+  service_times = rexp(length(arrivals), rate = (3*chefs) / 60)
+  
+  # set up tracking
+  arrival_times_temp <- arrival_times
+  
+  queue_size_history <- numeric(total_time)
+  
+  # number of tables occupied each minute
+  occupied_tables_history <- rep(0, total_time)
+  
+  # timer to track remaining waiting time for each table in the restaurant
+  # each element is one table in the restaurant
+  # -1 means empty
+  # otherwise, number of remaining service minutes
+  tables_timer <- rep(-1, tables)
+  
+  # the amount of minutes each customer of that day waited
+  waiting_times <- numeric(0)
+  
+  # the arrival_times indices of the people currently in line
+  # in order to know how long their eventual service time will be
+  queue <- numeric(0)
+  
+  # an internal counter separate from the time
+  customers_entered <- 0
+  
+  # iterate through the day
+  for (i in 1:total_time) {
+    occupied_tables_history[i+1] = occupied_tables_history[i]
+    
+    # update the waiting timer for all occupied tables
+    tables_timer[tables_timer > 0] <- tables_timer[tables_timer > 0] - 1
+    # update the number of available tables in the next minute
+    # based on the number of tables who have finished timers
+    occupied_tables_history[i+1] = occupied_tables_history[i+1] - sum(tables_timer == 0)
+    # mark the finished tables as available tables for the next minute
+    tables_timer[tables_timer == 0] <- tables_timer[tables_timer == 0] - 1
+    
+    # has the next customer arrived?
+    if(length(arrival_times_temp) > 0){
+      if(arrival_times_temp[1] < i) {
+        # if so, add them to the back of the queue
+        queue = c(queue, as.integer(customers_entered+1)) # add 1 for 1-indexing
+        # remove the 1st element of arrival_times
+        arrival_times_temp = arrival_times_temp[-1]
+        # start the waiting timer for this customer by appending 0
+        waiting_times = c(waiting_times, 0)
+        
+        customers_entered = customers_entered + 1
+      }
+    }
+    # are any tables currently open and there is a person in line?
+    if(occupied_tables_history[i+1] < tables & length(queue) > 0) {
+      # if so, then seat the first person in line
+      # at the first available table
+      for (j in 1:tables) {
+        if(tables_timer[j] == -1) {
+          # queue[1] has the customer index of the first person in line
+          tables_timer[j] = round(service_times[queue[1]])
+          break
+        }
+      }
+      # the next minute there will be one more occupied table
+      occupied_tables_history[i+1] = occupied_tables_history[i+1] + 1
+      # remove the first person in the queue
+      queue = queue[-1]
+    }
+    # update the waiting time for each person in the queue
+    for (customer_index in queue) {
+      waiting_times[customer_index] = waiting_times[customer_index] + 1
+    }
+    # keep track of how long the line is at each minute
+    queue_size_history[i] = length(queue)
+  }
+  
+  occupied_tables_history <- occupied_tables_history[-1]
+  
+  # calculate outputs (the things we actually care about) from the simulation
+  
+  # average waiting time across all customers
+  avg_waiting_time <- mean(waiting_times)
+  # number of customers who waited >30 minutes (and made us less money)
+  long_waits <- length(waiting_times[waiting_times > 30])
+  # average queue length throughout the day
+  avg_queue_length <- mean(queue_size_history)
+  # maximum queue length that day
+  max_queue_length <- max(queue_size_history)
+  # average table occupancy in the restaurant
+  avg_tables_occupied <- mean(occupied_tables_history)
+  
+  # return all of it, as a data frame with one row
+  sim_output <- data.frame(
+    avg_waiting_time = avg_waiting_time,
+    long_waits = long_waits,
+    avg_queue_length = avg_queue_length,
+    max_queue_length = max_queue_length,
+    avg_tables_occupied = avg_tables_occupied
+  )
+  return(sim_output)
+}
+
+num_chefs <- 2
+num_tables <- 5
+total_time <- 720
+
+df <- numeric(5)
+for(i in 1:100) {
+  arrival_times <- simulate_differential_arrival_times(
+  lunch_peak_start = hm("12:00"),
+  lunch_peak_end = hm("14:00"), 
+  dinner_peak_start = hm("18:00"),
+  dinner_peak_end = hm("20:00"), 
+  lambda_down = 6, lambda_peak = 60, total_time = total_time)
+  df <- rbind(df, restaurant_sim(arrival_times, num_chefs, num_tables, total_time))
+}
+
+df <- df[-1, ]
+
+summary <- data.frame(
+  Mean = apply(df, 2, mean),
+  Variance = apply(df, 2, var)
+)
+
+summary
+
+```
+
