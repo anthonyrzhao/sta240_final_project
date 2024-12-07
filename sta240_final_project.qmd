@@ -204,26 +204,6 @@ Waiting times tend to be short, if not zero, and on average, the waiting
 time is on average `r round(mean(waiting_times))` minutes.
 
 ```{r}
-#Label for 30 min interval
-breaks <- seq(30, 720, by = 30)
-labels <- sprintf("%02d:%02d", 10 + breaks %/% 60, breaks %% 60) 
-
-ggplot(scen1_sim_results, aes(x = time_of_day, y = waiting_times)) +
-  geom_point(color = "blue", size = 2, alpha = 0.6) +
-    scale_x_discrete(
-    breaks = breaks, 
-    labels = labels
-  ) +
-  labs(
-    title = "Scatter Plot",
-    x = "Time of the Day",
-    y = "Waiting Time"
-  ) +
-  theme_minimal()
-
-```
-
-```{r}
 library(ggplot2)
 
 
@@ -243,7 +223,8 @@ ggplot(scen1_sim_results, aes(x = arrival_times, y = waiting_times)) +
     x = "Time of the Day",
     y = "Waiting Time"
   ) +
-  theme_minimal()
+  theme_minimal()+
+  theme(panel.grid.minor = element_blank())
 
 ```
 
@@ -269,6 +250,7 @@ closing_time <- hm("22:00")
 hours <- hour(closing_time) - hour(opening_time)
 total_time <- hours*60 # operating hours in minutes
 lambdaA <- lambdaA/60 # per minute
+num_chefs = 2
 
 n <- ceiling(lambdaA*total_time) # max number of customers
 W_sample <- rexp(n, rate= lambdaA)
@@ -289,7 +271,7 @@ calc_service_times <- function(arrivals, chefs) {
   return(services) # in minutes
 }
 # if we only have one chef
-service_times <- calc_service_times(arrivals = arrival_times, chefs = 2)
+service_times <- calc_service_times(arrivals = arrival_times, chefs = num_chefs)
 ```
 
 ## Waiting Times
@@ -374,14 +356,29 @@ occupied_tables_history <- occupied_tables_history[-1]
 
 ```
 
-```{r scenario-2-plots}
-
+```{r}
 scen2_sim_results_by_customer <- data.frame(
   customer = 1:length(arrival_times),
   arrival_time = arrival_times,
   service_length = service_times,
   waiting_time = waiting_times
 )
+
+```
+
+```{r}
+scen2_sim_results_by_minute <- data.frame(
+  minutes_since_opening = 1:total_time,
+  time_of_day = I(lapply(1:total_time, function(i) opening_time + minutes(i))),
+  queue_size = queue_size_history,
+  occupied_tables = occupied_tables_history
+)
+
+```
+
+
+```{r scenario-2-plots}
+
 
 scen2_sim_results_by_customer |>
   ggplot(aes(x = arrival_time)) +
@@ -410,13 +407,17 @@ scen2_sim_results_by_customer |>
   ) +
   theme_minimal()
 
+scen2_sim_results_by_customer |>
+  ggplot(aes(x = arrival_time, y = waiting_time)) +
+  geom_point(size = 2, alpha = 0.6) +
+  scale_x_continuous(breaks = seq(0, total_time, by = 60)) +
+  labs(
+    x = "Minutes Since Opening",
+    y = "Waiting time of Customer"
+  ) +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
 
-scen2_sim_results_by_minute <- data.frame(
-  minutes_since_opening = 1:total_time,
-  time_of_day = I(lapply(1:total_time, function(i) opening_time + minutes(i))),
-  queue_size = queue_size_history,
-  occupied_tables = occupied_tables_history
-)
 
 scen2_sim_results_by_minute |>
   ggplot(aes(x = minutes_since_opening, y = queue_size)) +
@@ -443,6 +444,24 @@ scen2_sim_results_by_minute |>
   theme_minimal() +
   theme(panel.grid.minor = element_blank())
 
+scen2_sim_results_by_minute |>
+  ggplot(aes(x = minutes_since_opening, y = occupied_tables)) +
+  geom_area(fill = "lightblue") +
+  geom_line() +
+  scale_y_continuous(breaks = seq(1, tables, by = 1)) +
+  scale_x_continuous(breaks = seq(0, total_time, by = 60)) +
+  labs(
+    x = "Minutes Since Opening",
+    y = "Number of Tables Occupied"
+  ) +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
+
+
+```
+
+```{r}
+View(scen2_sim_results_by_minute)
 ```
 
 ## Restaurant Profits
@@ -454,6 +473,17 @@ Assumptions:
 
 2.  each chef earns a wage of \$40 per hour (paid for the entire
     duration of the restaurant's operating hours)
+    
+3.  Customer will not wait longer than 30 minutes
+
+```{r}
+wait_threshold <- 30
+customer_excluded <- scen2_sim_results_by_minute$queue_size[nrow(scen2_sim_results_by_minute)]+sum(scen2_sim_results_by_customer$waiting_time > wait_threshold)
+num_customer <- nrow(scen2_sim_results_by_customer) - customer_excluded
+expected_profit <- 50 * num_customer - 40 * 12* num_chefs
+expected_profit
+```
+
 
 ### Maximizing Profits
 
