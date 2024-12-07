@@ -745,9 +745,12 @@ restaurant_sim <- function(arrivals, chefs, tables, minutes) {
   max_queue_length <- max(queue_size_history)
   # average table occupancy in the restaurant
   avg_tables_occupied <- mean(occupied_tables_history)
+  # number of customers
+  num_customers <- length(waiting_times)
   
   # return all of it, as a data frame with one row
   sim_output <- data.frame(
+    total_customers = num_customers,
     num_chefs = chefs,
     num_tables = tables,
     avg_waiting_time = avg_waiting_time,
@@ -761,7 +764,7 @@ restaurant_sim <- function(arrivals, chefs, tables, minutes) {
 
 total_time <- 720
 
-df <- numeric(7)
+df <- numeric(8)
 for(a in 1:5) {
   num_chefs = a
   for(b in 1:5) {
@@ -789,7 +792,25 @@ df |>
   group_by(num_chefs, num_tables) |>
   summarise(mean = mean(avg_waiting_time), variance = var(avg_waiting_time)) |>
   ggplot(aes(x = num_tables, y = num_chefs, color = mean, size = variance)) +
-  geom_point()
+  geom_point() +
+  scale_color_gradient(low = "blue", high = "red") +
+  scale_x_continuous(
+    breaks = seq(min(df$num_tables), ceiling(max(df$num_tables)), by = 1),
+    labels = seq(min(df$num_tables), ceiling(max(df$num_tables)), by = 1)  
+  ) +
+  scale_y_continuous(
+    breaks = seq(min(df$num_chefs), ceiling(max(df$num_chefs)), by = 1),
+    labels = seq(min(df$num_chefs), ceiling(max(df$num_chefs)), by = 1)  
+  ) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank()) +
+  labs(
+    x = "Number of Tables",
+    y = "Number of Chefs",
+    color = "Average waiting time (minutes)",
+    size = "Variance between days"
+  )
+  
 
 # MEAN LONGEST WAITING TIME OF THE DAY
 df |>
