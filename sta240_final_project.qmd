@@ -37,6 +37,7 @@ wait 1/6 hours = 10 minutes.
 ```{r arrival-times, message=F, warning=F}
 library(tidyverse)
 library(lubridate)
+library(knitr)
 
 set.seed(121)
 
@@ -747,6 +748,8 @@ restaurant_sim <- function(arrivals, chefs, tables, minutes) {
   
   # return all of it, as a data frame with one row
   sim_output <- data.frame(
+    num_chefs = chefs,
+    num_tables = tables,
     avg_waiting_time = avg_waiting_time,
     long_waits = long_waits,
     avg_queue_length = avg_queue_length,
@@ -756,29 +759,61 @@ restaurant_sim <- function(arrivals, chefs, tables, minutes) {
   return(sim_output)
 }
 
-num_chefs <- 2
-num_tables <- 5
 total_time <- 720
 
-df <- numeric(5)
-for(i in 1:100) {
-  arrival_times <- simulate_differential_arrival_times(
-  lunch_peak_start = hm("12:00"),
-  lunch_peak_end = hm("14:00"), 
-  dinner_peak_start = hm("18:00"),
-  dinner_peak_end = hm("20:00"), 
-  lambda_down = 6, lambda_peak = 60, total_time = total_time)
-  df <- rbind(df, restaurant_sim(arrival_times, num_chefs, num_tables, total_time))
+df <- numeric(7)
+for(a in 1:5) {
+  num_chefs = a
+  for(b in 1:5) {
+    num_tables = b
+    for(i in 1:10) {
+      arrival_times <- simulate_differential_arrival_times(
+      lunch_peak_start = hm("12:00"),
+      lunch_peak_end = hm("14:00"), 
+      dinner_peak_start = hm("18:00"),
+      dinner_peak_end = hm("20:00"), 
+      lambda_down = 6, lambda_peak = 60, total_time = total_time)
+      df <- rbind(df, restaurant_sim(arrival_times, num_chefs, num_tables, total_time))
+    }
+  }
 }
 
 df <- df[-1, ]
 
-summary <- data.frame(
-  Mean = apply(df, 2, mean),
-  Variance = apply(df, 2, var)
-)
 
-summary
+```
+```{r}
+
+# MEAN WAITING TIMES
+df |>
+  group_by(num_chefs, num_tables) |>
+  summarise(mean = mean(avg_waiting_time), variance = var(avg_waiting_time)) |>
+  ggplot(aes(x = num_tables, y = num_chefs, color = mean, size = variance)) +
+  geom_point()
+
+# MEAN LONGEST WAITING TIME OF THE DAY
+df |>
+  group_by(num_chefs, num_tables) |>
+  summarise(mean = mean(long_waits), variance = var(long_waits)) |>
+  kable()
+
+# MEAN QUEUE LENGTH
+df |>
+  group_by(num_chefs, num_tables) |>
+  summarise(mean = mean(avg_queue_length), variance = var(avg_queue_length)) |>
+  kable()
+
+# MEAN MAX QUEUE LENGTH FOR EACH DAY
+df |>
+  group_by(num_chefs, num_tables) |>
+  summarise(mean = mean(max_queue_length), variance = var(max_queue_length)) |>
+  kable()
+
+# MEAN TABLES OCCUPIED
+df |>
+  group_by(num_chefs, num_tables) |>
+  summarise(mean = mean(avg_tables_occupied), variance = var(avg_tables_occupied)) |>
+  kable()
 
 ```
 
