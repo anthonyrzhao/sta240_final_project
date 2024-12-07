@@ -474,18 +474,9 @@ Assumptions:
 
 2.  each chef earns a wage of \$40 per hour (paid for the entire
     duration of the restaurant's operating hours)
-    
-<<<<<<< HEAD
+
 3.  Customer will not wait longer than 30 minutes
 
-```{r}
-wait_threshold <- 30
-customer_excluded <- scen2_sim_results_by_minute$queue_size[nrow(scen2_sim_results_by_minute)]+sum(scen2_sim_results_by_customer$waiting_time > wait_threshold)
-num_customer <- nrow(scen2_sim_results_by_customer) - customer_excluded
-expected_profit <- 50 * num_customer - 40 * 12* num_chefs
-expected_profit
-=======
-    
 ```{r}
 # assumption of five tables and 3 chefs
 
@@ -510,7 +501,6 @@ profit
 #   
 # }
 
->>>>>>> c622df4e5b627dda20a136080a84bae9a474e79b
 ```
 
 
