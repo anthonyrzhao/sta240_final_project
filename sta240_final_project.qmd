@@ -72,21 +72,21 @@ for(i in 1:n) {
 
 # however, the store is only open for 12 hours or 720 minutes so we must get rid of the values that fall outside of the range (go beyond 720)
 
-arrival_times <- T_sample[T_sample <= total_time]
+arrival_times_s1 <- T_sample[T_sample <= total_time]
 
-arrival_times
+arrival_times_s1
 
-opening_time + minutes(floor(max(arrival_times)))
+opening_time + minutes(floor(max(arrival_times_s1)))
 
 ```
 
 ### Arrival Times Analysis
 
 In this simulation, the number of customers that will be arriving within
-the operating hours is `r length(arrival_times)`, with the first
-customer arriving `r floor(min(arrival_times))` minutes after opening
+the operating hours is `r length(arrival_times_s1)`, with the first
+customer arriving `r floor(min(arrival_times_s1))` minutes after opening
 and the last customer arriving
-`r ceiling(total_time - max(arrival_times))` minutes before closing
+`r ceiling(total_time - max(arrival_times_s1))` minutes before closing
 
 ## Serving Times
 
@@ -99,22 +99,13 @@ lambdaS <- lambdaS/60 # customers per minute
 
 # simulate customer's service time 
 # n= only simulating the service time for those where T_sample <= total_time
-service_times <- rexp(length(arrival_times), rate= lambdaS)
+service_times_s1 <- rexp(length(arrival_times_s1), rate= lambdaS)
 
 #these are the serving times for each arriving customer before they leave
-service_times 
+service_times_s1
 
 ```
 
-### Serving Times Analysis
-
-```{r service-times-graph}
-boxplot(service_times, horizontal= TRUE, main= "Service Times", xlab= "Minutes")
-```
-
-The average service time is `r round(mean(service_times))` minutes, with
-the data skewed right, consistent with an exponential distribution. This
-indicates that service times tend to lower.
 
 ## Time of the day with arrival time
 
@@ -124,7 +115,7 @@ start_time <- as.POSIXct("10:00", format = "%H:%M", tz = "UTC")
 
 # Add minutes to the start time
 
-time_of_day <- sapply(arrival_times, function(m) {
+time_of_day <- sapply(arrival_times_s1, function(m) {
   m <- round(m)  # Round to nearest whole number
   new_time <- start_time + (m * 60)  # Add minutes converted to seconds
   format(new_time, "%H:%M")  # Format as "HH:MM"
@@ -148,47 +139,47 @@ print(time_of_day)
 # but if arrival time < service time ends then wait time = time service ends- arrival time 
 
 # variable initialization
-waiting_times <- numeric(length(arrival_times))  # generating times for each customer
-service_start <- numeric(length(arrival_times)) 
-service_end <- numeric(length(arrival_times))  
+waiting_times_s1 <- numeric(length(arrival_times_s1))  # generating times for each customer
+service_start <- numeric(length(arrival_times_s1)) 
+service_end <- numeric(length(arrival_times_s1))  
 current_end <- numeric(0) # service end time for current customer (i)
 
 # iterate over each customer
-for (i in 1:length(arrival_times)) {
+for (i in 1:length(arrival_times_s1)) {
 
   # only includes observations where service time > arrival time => which means there is a wait time
   # gets rid of observations where service < arrival time => 0 wait time
   if (length(current_end) > 0) {
-    current_end <- current_end[current_end > arrival_times[i]]
+    current_end <- current_end[current_end > arrival_times_s1[i]]
   }
   
  if (length(current_end) == 0) {
    # scenario 1: if there is no waiting time, service starts at the customer arrival
-    service_start[i] <- arrival_times[i]
+    service_start[i] <- arrival_times_s1[i]
   } else {
     # scenario 2: if there is a waiting time, service starts at the end of the previous customer's end time
     previous_end <- service_end[i - 1]
-    service_start[i] <- max(arrival_times[i], previous_end)
+    service_start[i] <- max(arrival_times_s1[i], previous_end)
   }
   
   # update the service end time for current customer by adding when service starts and how long the service takes
-  service_end[i] <- service_start[i] + service_times[i]
+  service_end[i] <- service_start[i] + service_times_s1[i]
   
   # add this service end time to current end services
   current_end <- c(current_end , service_end[i])
   
   # update waiting time
-  waiting_times[i] <- service_start[i] - arrival_times[i]
+  waiting_times_s1[i] <- service_start[i] - arrival_times_s1[i]
 }
 
 
 scen1_sim_results <- data.frame(
-  customer = 1:length(arrival_times),
-  arrival_time = arrival_times,
-  service_length = service_times,
+  customer = 1:length(arrival_times_s1),
+  arrival_time = arrival_times_s1,
+  service_length = service_times_s1,
   service_start = service_start,
   service_end = service_end,
-  waiting_time = waiting_times,
+  waiting_time = waiting_times_s1,
   time_of_day = time_of_day
 )
 
@@ -196,20 +187,53 @@ print(head(scen1_sim_results, 5)) # printing first 5 customers
 
 ```
 
+### Serving and Waiting Times Analysis
+
+```{r service-times-graph}
+# boxplot(service_times, horizontal= TRUE, main= "Service Times", xlab= "Minutes")
+
+scen1_sim_results %>%
+  ggplot(aes(x= service_length)) +
+  geom_boxplot() +
+  labs(
+    x= "Minutes",
+    title = "Service Times"
+  ) +
+  theme_minimal()
+
+mean(service_times_s1)
+
+```
+
+The average service time is `r round(mean(service_times_s1))` minutes, with
+the data skewed right, consistent with an exponential distribution. This
+indicates that service times tend to lower.
+
 ```{r waiting-times-dist}
-boxplot(waiting_times, horizontal= TRUE, main= "Waiting Times", xlab= "Minutes")
-mean(waiting_times)
+# boxplot(waiting_times_s1, horizontal= TRUE, main= "Waiting Times", xlab= "Minutes")
+
+mean(waiting_times_s1)
+
+scen1_sim_results %>% 
+  ggplot(aes(x= waiting_time)) +
+  geom_boxplot() +
+  labs(
+    x= "Minutes",
+    title = "Waiting Times"
+  ) +
+  theme_minimal()
+
 ```
 
 Waiting times tends to be slightly right-skewed and on average, the
-waiting time is `r round(mean(waiting_times))` minutes.
+waiting time is `r round(mean(waiting_times_s1))` minutes.
 
 ```{r}
 #Label for 30 min interval
 breaks <- seq(30, 720, by = 30)
 labels <- sprintf("%02d:%02d", 10 + breaks %/% 60, breaks %% 60) 
 
-ggplot(scen1_sim_results, aes(x = time_of_day, y = waiting_times)) +
+ggplot(scen1_sim_results, aes(x = time_of_day, y = waiting_times_s1)) +
   geom_point(color = "blue", size = 2, alpha = 0.6) +
     scale_x_discrete(
     breaks = breaks, 
@@ -233,7 +257,7 @@ breaks <- seq(30, 720, by = 60)
 labels <- sprintf("%02d:%02d", 10 + breaks %/% 60, breaks %% 60)
 
 # Scatter plot with x-axis as numeric time in minutes
-ggplot(scen1_sim_results, aes(x = arrival_times, y = waiting_times)) +
+ggplot(scen1_sim_results, aes(x = arrival_times_s1, y = waiting_times_s1)) +
   geom_point(color = "blue", size = 2, alpha = 0.6) +
   scale_x_continuous(
     breaks = breaks, 
@@ -455,34 +479,58 @@ Assumptions:
 
 2.  each chef earns a wage of \$40 per hour (paid for the entire
     duration of the restaurant's operating hours)
-    
-    
-```{r}
+
+```{r profit-chefs}
 # assumption of five tables and 3 chefs
 
-chefs <- 3
+# setting number of chefs to a certain number
+# chefs <- 3
+# meal <- 50 #50 dollars per meal
+# wage <- 12*40 #40 dollars per hour for 12 hrs of work
+# revenue <- total_customers * meal
+# costs <- wage*chefs
+# profit <- revenue - costs
+# profit
+
+# only including customers who are waiting for less than 30 mins because will leave the line if wait time is greater than that amount 
+
+filtered_customers <- which(waiting_times < 30) 
+total_customers <- length(filtered_customers)
+total_customers
+
 meal <- 50 #50 dollars per meal
 wage <- 12*40 #40 dollars per hour for 12 hrs of work
-total_customers <- length(arrival_times) #55
-revenue <- total_customers * meal
-costs <- wage*chefs
-profit <- revenue - costs
-profit
 
-# for (chefs in 1:10) {
-# 
-#   revenue <- total_customers * meal
-#   
-#   # Calculate costs (wage per chef * number of chefs)
-#   costs <- wage * chefs
-#   
-#   # Calculate profit
-#   profit <- revenue - costs
-#   
-# }
+profit_table <- data.frame(
+  Chefs = integer(),
+  Revenue = numeric(),
+  Costs = numeric(),
+  Profit = numeric()
+) 
+
+# if people get mad, the meal will only be 25 because they are mad
+
+for (chefs in 1:10) {
+
+  revenue <- total_customers * meal
+
+  # Calculate costs (wage per chef * number of chefs)
+  costs <- wage * chefs
+
+  # Calculate profit
+  profit <- revenue - costs
+
+  profit_table <- rbind(profit_table, data.frame(Chefs = chefs, Revenue = revenue, Costs = costs, Profit = profit))
+
+}
+
+print(profit_table)
 
 ```
 
+```{r profit-chefs-graph}
+
+```
 
 ### Maximizing Profits
 
