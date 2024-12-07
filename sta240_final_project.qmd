@@ -38,6 +38,8 @@ wait 1/6 hours = 10 minutes.
 library(tidyverse)
 library(lubridate)
 
+set.seed(121)
+
 # simulating the arrival times of customers throughout the day
 
 # Poisson process (lambda = 5)
@@ -114,6 +116,23 @@ The average service time is `r round(mean(service_times))` minutes, with
 the data skewed right, consistent with an exponential distribution. This
 indicates that service times tend to lower.
 
+## Time of the day with arrival time
+
+```{r}
+# Start time as POSIXct
+start_time <- as.POSIXct("10:00", format = "%H:%M", tz = "UTC")
+
+# Add minutes to the start time
+
+time_of_day <- sapply(arrival_times, function(m) {
+  m <- round(m)  # Round to nearest whole number
+  new_time <- start_time + (m * 60)  # Add minutes converted to seconds
+  format(new_time, "%H:%M")  # Format as "HH:MM"
+})
+
+print(time_of_day)
+```
+
 ## Waiting Times
 
 ```{r customer-service}
@@ -168,7 +187,8 @@ scen1_sim_results <- data.frame(
   service_length = service_times,
   service_start = service_start,
   service_end = service_end,
-  waiting_time = waiting_times
+  waiting_time = waiting_times,
+  time_of_day = time_of_day
 )
 
 print(head(scen1_sim_results, 15)) # printing first 15 customers
@@ -182,6 +202,50 @@ mean(waiting_times)
 
 Waiting times tend to be short, if not zero, and on average, the waiting
 time is on average `r round(mean(waiting_times))` minutes.
+
+```{r}
+#Label for 30 min interval
+breaks <- seq(30, 720, by = 30)
+labels <- sprintf("%02d:%02d", 10 + breaks %/% 60, breaks %% 60) 
+
+ggplot(scen1_sim_results, aes(x = time_of_day, y = waiting_times)) +
+  geom_point(color = "blue", size = 2, alpha = 0.6) +
+    scale_x_discrete(
+    breaks = breaks, 
+    labels = labels
+  ) +
+  labs(
+    title = "Scatter Plot",
+    x = "Time of the Day",
+    y = "Waiting Time"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+library(ggplot2)
+
+
+# Custom breaks and labels for 30-minute intervals
+breaks <- seq(30, 720, by = 60)
+labels <- sprintf("%02d:%02d", 10 + breaks %/% 60, breaks %% 60)
+
+# Scatter plot with x-axis as numeric time in minutes
+ggplot(scen1_sim_results, aes(x = arrival_times, y = waiting_times)) +
+  geom_point(color = "blue", size = 2, alpha = 0.6) +
+  scale_x_continuous(
+    breaks = breaks, 
+    labels = labels
+  ) +
+  labs(
+    title = "Scatter Plot",
+    x = "Time of the Day",
+    y = "Waiting Time"
+  ) +
+  theme_minimal()
+
+```
 
 # Scenario 2
 
