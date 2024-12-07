@@ -192,7 +192,7 @@ scen1_sim_results <- data.frame(
   time_of_day = time_of_day
 )
 
-print(head(scen1_sim_results, 15)) # printing first 15 customers
+print(head(scen1_sim_results, 5)) # printing first 5 customers
 
 ```
 
@@ -201,8 +201,8 @@ boxplot(waiting_times, horizontal= TRUE, main= "Waiting Times", xlab= "Minutes")
 mean(waiting_times)
 ```
 
-Waiting times tend to be short, if not zero, and on average, the waiting
-time is on average `r round(mean(waiting_times))` minutes.
+Waiting times tends to be slightly right-skewed and on average, the
+waiting time is `r round(mean(waiting_times))` minutes.
 
 ```{r}
 #Label for 30 min interval
@@ -455,6 +455,34 @@ Assumptions:
 
 2.  each chef earns a wage of \$40 per hour (paid for the entire
     duration of the restaurant's operating hours)
+    
+    
+```{r}
+# assumption of five tables and 3 chefs
+
+chefs <- 3
+meal <- 50 #50 dollars per meal
+wage <- 12*40 #40 dollars per hour for 12 hrs of work
+total_customers <- length(arrival_times) #55
+revenue <- total_customers * meal
+costs <- wage*chefs
+profit <- revenue - costs
+profit
+
+# for (chefs in 1:10) {
+# 
+#   revenue <- total_customers * meal
+#   
+#   # Calculate costs (wage per chef * number of chefs)
+#   costs <- wage * chefs
+#   
+#   # Calculate profit
+#   profit <- revenue - costs
+#   
+# }
+
+```
+
 
 ### Maximizing Profits
 
