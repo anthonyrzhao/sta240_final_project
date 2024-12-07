@@ -1,0 +1,99 @@
+---
+title: "Scenario 3"
+format: html
+editor: visual
+---
+
+## Quarto
+
+More realistic peak time, with lambda_down = 6, lambda_peak = 60
+
+```{r}
+library(lubridate)
+library(tidyverse)
+
+# Function to simulate customer arrival times
+
+opening_time <- hm("10:00")  # Opening time: 10:00 AM
+closing_time <- hm("22:00")  # Closing time: 10:00 PM
+
+simulate_differential_arrival_times <- function(lunch_peak_start, lunch_peak_end, 
+                                   dinner_peak_start, dinner_peak_end, 
+                                   lambda_down, lambda_peak) {
+  # Calculate total operating time in minutes
+  total_time <- 720
+  
+  # Convert arrival rates to per minute
+  rate_down <- lambda_down / 60
+  rate_peak <- lambda_peak / 60
+  
+  # Convert peak times to minutes from opening
+  lunch_peak_start_min <- as.numeric(as.duration(lunch_peak_start - opening_time), units = "minutes")
+  lunch_peak_end_min <- as.numeric(as.duration(lunch_peak_end - opening_time), units = "minutes")
+  
+  dinner_peak_start_min <- as.numeric(as.duration(dinner_peak_start - opening_time), units = "minutes")
+  dinner_peak_end_min <- as.numeric(as.duration(dinner_peak_end - opening_time), units = "minutes")
+  
+  # Initialize list to store arrival times
+  arrival_times <- numeric()
+  current_time <- 0  # Start at 0 minutes (opening time)
+  
+  # Generate arrival times
+  while (current_time < total_time) {
+    # Determine the arrival rate based on current time
+    if ((current_time >= lunch_peak_start_min && current_time < lunch_peak_end_min) ||
+        (current_time >= dinner_peak_start_min && current_time < dinner_peak_end_min)) {
+      arrival_rate <- rate_peak  # Peak time rate
+    } else {
+      arrival_rate <- rate_down  # Downtime rate
+    }
+    
+    # Generate the next interarrival time from the exponential distribution
+    next_arrival <- rexp(1, arrival_rate)
+    
+    # Update the current time
+    current_time <- current_time + next_arrival
+    
+    # If within the operating hours, add the arrival time to the list
+    if (current_time < total_time) {
+      arrival_times <- c(arrival_times, current_time)
+    }
+  }
+  
+  # Return arrival_times
+  return(arrival_times)
+}
+```
+
+```{r}
+# Example Usage
+lunch_peak_start <- hm("12:00")
+lunch_peak_end <- hm("14:00")
+dinner_peak_start <- hm("18:00")
+dinner_peak_end <- hm("20:00")
+lambda_down <- 6  # Customers per hour during downtime
+lambda_peak <- 60  # Customers per hour during peak time
+
+# Simulate arrival times
+arrival_times <- simulate_differential_arrival_times(
+  lunch_peak_start, lunch_peak_end, 
+  dinner_peak_start, dinner_peak_end, 
+  lambda_down, lambda_peak
+)
+```
+
+```{r}
+print(arrival_times)
+
+ggplot(data = data.frame(arrival_times), aes(x = arrival_times)) +
+  geom_histogram(binwidth = 10, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Histogram of Customer Arrival Times",
+    x = "Time of Day (Hours)",
+    y = "Number of Arrivals"
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 720, by = 30)
+  ) +
+  theme_minimal()
+```
