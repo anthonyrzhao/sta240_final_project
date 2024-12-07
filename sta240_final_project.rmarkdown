@@ -7,6 +7,8 @@ editor:
     wrap: 72
 ---
 
+
+
 # Scenario 1
 
 ### Customer Arrival
@@ -33,6 +35,8 @@ where $\lambda = 6$ customers per hour, so the average customer needs to
 wait 1/6 hours = 10 minutes.
 
 ## Arrival Times
+
+
 
 ```{r arrival-times, message=F, warning=F}
 library(tidyverse)
@@ -81,6 +85,8 @@ opening_time + minutes(floor(max(arrival_times_s1)))
 
 ```
 
+
+
 ### Arrival Times Analysis
 
 In this simulation, the number of customers that will be arriving within
@@ -90,6 +96,8 @@ and the last customer arriving
 `r ceiling(total_time - max(arrival_times_s1))` minutes before closing
 
 ## Serving Times
+
+
 
 ```{r serving-times}
 # given the output from above, simulate the serving times of customers before they leave
@@ -107,7 +115,11 @@ service_times_s1
 
 ```
 
+
+
 ## Time of the day with arrival time
+
+
 
 ```{r}
 # Start time as POSIXct
@@ -124,7 +136,11 @@ time_of_day <- sapply(arrival_times_s1, function(m) {
 print(time_of_day)
 ```
 
+
+
 ## Waiting Times
+
+
 
 ```{r customer-service}
 
@@ -187,7 +203,11 @@ print(head(scen1_sim_results, 5)) # printing first 5 customers
 
 ```
 
+
+
 ### Serving and Waiting Times Analysis
+
+
 
 ```{r service-times-graph}
 # boxplot(service_times, horizontal= TRUE, main= "Service Times", xlab= "Minutes")
@@ -205,9 +225,13 @@ mean(service_times_s1)
 
 ```
 
+
+
 The average service time is `r round(mean(service_times_s1))` minutes,
 with the data skewed right, consistent with an exponential distribution.
 This indicates that service times tend to lower.
+
+
 
 ```{r waiting-times-dist}
 # boxplot(waiting_times_s1, horizontal= TRUE, main= "Waiting Times", xlab= "Minutes")
@@ -225,8 +249,12 @@ scen1_sim_results %>%
 
 ```
 
+
+
 Waiting times tends to be slightly right-skewed and on average, the
 waiting time is `r round(mean(waiting_times_s1))` minutes.
+
+
 
 ```{r}
 
@@ -275,6 +303,8 @@ ggplot(scen1_sim_results, aes(x = arrival_times_s1, y = waiting_times_s1)) +
 
 ```
 
+
+
 # Scenario 2
 
 ## Arrival and Service
@@ -288,6 +318,8 @@ Assumptions:
 3.  service time modeled by an exponential distribution with rate λS =
     3L, so that the more chefs there are, the faster the service times
     become **(this is not very realistic)**
+
+
 
 ```{r arrival-service-2}
 # first, we generate the arrival times similar in scenario 1
@@ -321,9 +353,13 @@ calc_service_times <- function(arrivals, chefs) {
 service_times <- calc_service_times(arrivals = arrival_times, chefs = num_chefs)
 ```
 
+
+
 ## Waiting Times
 
 To model waiting times, we iterate through the day minute by minute.
+
+
 
 ```{r waiting-2}
 
@@ -492,6 +528,8 @@ scen2_sim_results_by_minute |>
 
 ```
 
+
+
 ## Restaurant Profits
 
 Assumptions:
@@ -517,6 +555,8 @@ How does the occupancy of the restaurant vary throughout the day? Does
 that inform any of our recommendations?
 
 # Scenario 3
+
+
 
 ```{r}
 simulate_differential_arrival_times <- function(
@@ -879,3 +919,4 @@ df |>
     size = "Variance between days"
   )
 ```
+
