@@ -808,20 +808,6 @@ df |>
 
 ```
 
-```{r profit-chefs-graph}
-
-profit_table %>%
-  ggplot(aes(x = Chefs, y = Profit)) +
-  geom_line() +
-  scale_x_continuous(breaks = seq(1, 10, 1))+
-  labs(
-    x= "Number of Chefs",
-    y= "Profit",
-    title= "Number of Chefs versus Profit"
-  ) +
-  theme_minimal()
-```
-
 ```{r}
 # MEAN Profit
 
