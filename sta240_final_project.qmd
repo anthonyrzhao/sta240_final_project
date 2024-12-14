@@ -7,13 +7,19 @@ execute:
 editor: 
   markdown: 
     wrap: 72
+output: 
+  pdf_document:
+    latex_engine: xelatex
+geometry: "top=2.5cm, bottom=2.5cm"
 ---
 
-# Scenario 1
+## Introduction
 
-### Customer Arrival
+In 2024 alone, the restaurant industry was predicted to reach $1 trillion in sales; however, with rising costs and increased competition, owners must find innovative ways to keep up profit (National Restaurant Association, 2024). With increased technology, many restaurants are turning to data to provide insights into operations. Therefore, in this project, we will be analyzing performance metrics in three different scenarios to inform our decision on profit maximization. The goal for this project is three-fold: to utilize probabilistic modeling to optimize restaurant operations, to analyze customer behavior to maximize consumer satisfaction, and to provide business recommendations by considering key performance metrics such as waiting times, the number of chefs, and more. In the following scenarios, we assume the restaurant operates between the hours of 10am - 10pm. 
 
-Poisson process (rate = $\lambda$)
+## Scenario 1
+
+The first scenario considers a setting with 1 table and 1 chef. Customer arrival will be modeled to $W_k \sim Pois(\lambda)$ with $\lambda = 5$ and customer service time will be modeled by $S_k \sim Exp(\lambda)$ where $\lambda = 6$. 
 
 -   $T_k$: Arrival time of the $k$th customer
 
@@ -22,28 +28,12 @@ Poisson process (rate = $\lambda$)
 $$
   W_k = T_k - T_{k-1}.
 $$
-
-$W_k \sim Pois(\lambda)$
-
-where $\lambda = 5$ customers per hour
-
-### Service Time
-
-$S_k \sim Exp(\lambda)$
-
-where $\lambda = 6$ customers per hour, so the average customer needs to
-wait 1/6 hours = 10 minutes.
-
-## Arrival Times
-
-Open at 10am, close at 10pm, 5 customers arrive per hour on average
-
-(Expressed in minutes after opening)
-
-```{r arrival-times, message=F, warning=F}
+```{r packages, message=F, warning=F}
 library(tidyverse)
 library(lubridate)
 library(knitr)
+library(dplyr)
+library(gridExtra)
 source("functions.R")
 
 set.seed(121)
@@ -55,37 +45,21 @@ total_time_s1 <- calc_total_time(opening_time_s1, closing_time_s1)
 arrival_rate_s1 <- 5 # customers per hour
 arrival_times_s1 <- calc_simple_arrival_times(arrival_rate_s1, total_time_s1)
 
-arrival_times_s1
+#arrival_times_s1
 
 ```
 
-### Arrival Times Analysis
+### Arrival Times
 
-In this simulation, the number of customers that will be arriving within
+In this simulation, on average, the number of customers arriving is 5 per hour, so around every 12 minutes. The number of customers that will be arriving within
 the operating hours is `r length(arrival_times_s1)`, with the first
-customer arriving `r floor(min(arrival_times_s1))` minutes after opening
+customer arriving `r floor(min(arrival_times_s1))` minutes after opening at 10:15 AM
 and the last customer arriving
-`r ceiling(total_time_s1 - max(arrival_times_s1))` minutes before closing
+`r ceiling(total_time_s1 - max(arrival_times_s1))` minutes before closing at 8:54 PM. The table below provides arrival times for the first seven customers. 
 
-## Serving Times
 
-The average customer takes 1/6 hours, or 10 minutes to serve. So \lambda = 6
+```{r arrival-times}
 
-(The number of minutes taken by each customer after sitting down in the restaurant)
-```{r serving-times}
-# given the output from above, simulate the serving times of customers before they leave
-
-service_rate_s1 <- 6
-
-service_times_s1 <- calc_simple_service_times(arrival_times_s1, service_rate_s1/3) # inside the function it gets multiplifed by 3
-
-service_rate_s1
-
-```
-
-## Time of the day with arrival time
-
-```{r}
 # Start time as POSIXct
 opening_time_s1 <- as.POSIXct("10:00", format = "%H:%M", tz = "UTC")
 
@@ -97,10 +71,29 @@ time_of_day_s1 <- sapply(arrival_times_s1, function(m) {
   format(new_time, "%H:%M")  # Format as "HH:MM"
 })
 
-time_of_day_s1
+#time_of_day_s1
 ```
 
-## Waiting Times
+```{r time-with-arrivals}
+
+time_table <- data.frame(
+  Minutes = arrival_times_s1,
+  Time= time_of_day_s1
+)
+
+head(time_table, 7)
+
+```
+
+```{r serving-times}
+# given the output from above, simulate the serving times of customers before they leave
+
+service_rate_s1 <- 6
+
+service_times_s1 <- calc_simple_service_times(arrival_times_s1, service_rate_s1/3) # inside the function it gets multiplifed by 3
+
+# service_rate_s1
+```
 
 ```{r customer-service}
 
@@ -148,60 +141,93 @@ for (i in 1:length(arrival_times_s1)) {
   waiting_times_s1[i] <- service_start[i] - arrival_times_s1[i]
 }
 
-
 scen1_sim_results <- data.frame(
-  customer = 1:length(arrival_times_s1),
-  arrival_time = arrival_times_s1,
-  service_length = service_times_s1,
-  service_start = service_start,
-  service_end = service_end,
-  waiting_time = waiting_times_s1,
-  time_of_day = time_of_day_s1
+  Customer = 1:length(service_times_s1),
+  Service_Length = service_times_s1,
+  Service_Start = service_start,
+  Service_End = service_end,
+  Waiting_Time = waiting_times_s1,
+  Time = time_of_day_s1
 )
-
-head(scen1_sim_results, 5)
 
 ```
 
-### Serving and Waiting Times Analysis
 
 ```{r service-times-graph}
 
-scen1_sim_results %>%
-  ggplot(aes(x= service_length)) +
-  geom_boxplot() +
+boxplot <- scen1_sim_results %>%
+  ggplot(aes(x= Service_Length)) +
+  geom_boxplot(width=0.5) +
   labs(
     x= "Minutes",
     title = "Service Times"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(
+    axis.text.y = element_blank(),    
+    axis.ticks.y = element_blank(),
+    plot.title = element_text(hjust = 0.5) 
+  )
 
-mean(service_times_s1)
+grid.arrange(boxplot, widths = c(0.5))
+
+summary_stats_service_times <- scen1_sim_results %>%
+  summarize(
+    Min = min(Service_Length),
+    Q1 = quantile(Service_Length, 0.25),
+    Median = median(Service_Length),
+    Q3 = quantile(Service_Length, 0.75),
+    Max = max(Service_Length),
+  )
+
+print(summary_stats_service_times)
 
 ```
 
-The average service time is `r round(mean(service_times_s1))` minutes,
-with the data skewed right, consistent with an exponential distribution.
-This indicates that service times tend to lower.
+The median service time is `r round(median(service_times_s1))` minutes, with the shortest service time being `r round(min(service_times_s1))` and the longest service time being `r round(max(service_times_s1))`, which appears to be an outlier. Overall, the data is skewed right, consistent with an exponential distribution, and this indicates that service times tend to be quick.
+
 
 ```{r waiting-times-dist}
 
-scen1_sim_results %>% 
-  ggplot(aes(x= waiting_time)) +
+boxplot2 <- scen1_sim_results %>% 
+  ggplot(aes(x= Waiting_Time)) +
   geom_boxplot() +
   labs(
     x= "Minutes",
     title = "Waiting Times"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(
+    axis.text.y = element_blank(),    
+    axis.ticks.y = element_blank(),
+    plot.title = element_text(hjust = 0.5) 
+  )
 
-mean(waiting_times_s1)
+grid.arrange(boxplot2, widths = c(0.5))
 
+summary_stats_waiting_times <- scen1_sim_results %>%
+  summarize(
+    Min = min(Waiting_Time),
+    Q1 = quantile(Waiting_Time, 0.25),
+    Median = median(Waiting_Time),
+    Q3 = quantile(Waiting_Time, 0.75),
+    Max = max(Waiting_Time),
+    SD = sd(Waiting_Time)
+  )
+
+print(summary_stats_waiting_times)
 
 ```
 
-Waiting times tends to be slightly right-skewed and on average, the
-waiting time is `r round(mean(waiting_times_s1))` minutes.
+On average, the waiting time is `r round(median(waiting_times_s1))` minutes, with the lowest waiting time being `r round(min(waiting_times_s1))` and the highest waiting time being `r round(max(waiting_times_s1))`. Overall, waiting times tends to be fairly symmetric with a slight positive skew and there are no visible outliers. Wait times are spread out with times being, on average, `r round(sd(waiting_times_s1))` minutes from the mean of `r round(mean(waiting_times_s1))` minutes. 
+
+
+```{r info-together}
+head(scen1_sim_results, 10)
+
+# print(scen1_sim_results)
+```
+
 
 ```{r}
 
@@ -209,20 +235,24 @@ waiting time is `r round(mean(waiting_times_s1))` minutes.
 breaks <- seq(30, 720, by = 30)
 labels <- sprintf("%02d:%02d", 10 + breaks %/% 60, breaks %% 60) 
 
-ggplot(scen1_sim_results, aes(x = time_of_day, y = waiting_times_s1)) +
+ggplot(scen1_sim_results, aes(x = Time, y = Waiting_Time)) +
   geom_point(color = "blue", size = 2, alpha = 0.6) +
     scale_x_discrete(
     breaks = breaks, 
     labels = labels
   ) +
   labs(
-    title = "Scatter Plot",
-    x = "Time of the Day",
+    title = "Waiting Time versus Time of Day",
+    x = "Time of Day",
     y = "Waiting Time"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5) 
+  )
 
 ```
+Overall, waiting times appear to be highest around noon or lunch when customer satisfication is lowest. Waiting times decrease steadily 3 pm onwards until closing, suggesting a less busy dinner time where the restaurant has more down time. In our simulation, the maximum service time, 73 minutes, occured an hour before the rush hour, and as a result, waiting times increased significantly after this customer. Although overall service times are fairly quick, the restaurant should do their best to ensure service times are just as fast or even faster during the busy hours. 
 
 # Scenario 2
 
