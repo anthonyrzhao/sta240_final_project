@@ -15,11 +15,26 @@ geometry: "top=2.5cm, bottom=2.5cm"
 
 ## Introduction
 
-In 2024 alone, the restaurant industry was predicted to reach $1 trillion in sales; however, with rising costs and increased competition, owners must find innovative ways to keep up profit (National Restaurant Association, 2024). With increased technology, many restaurants are turning to data to provide insights into operations. Therefore, in this project, we will be analyzing performance metrics in three different scenarios to inform our decision on profit maximization. The goal for this project is three-fold: to utilize probabilistic modeling to optimize restaurant operations, to analyze customer behavior to maximize consumer satisfaction, and to provide business recommendations by considering key performance metrics such as waiting times, the number of chefs, and more. In the following scenarios, we assume the restaurant operates between the hours of 10am - 10pm. 
+In 2024 alone, the restaurant industry was predicted to reach \$1
+trillion in sales; however, with rising costs and increased competition,
+owners must find innovative ways to keep up profit (National Restaurant
+Association, 2024). With increased technology, many restaurants are
+turning to data to provide insights into operations. Therefore, in this
+project, we will be analyzing performance metrics in three different
+scenarios to inform our decision on profit maximization. The goal for
+this project is three-fold: to utilize probabilistic modeling to
+optimize restaurant operations, to analyze customer behavior to maximize
+consumer satisfaction, and to provide business recommendations by
+considering key performance metrics such as waiting times, the number of
+chefs, and more. In the following scenarios, we assume the restaurant
+operates between the hours of 10am - 10pm.
 
 ## Scenario 1
 
-The first scenario considers a setting with 1 table and 1 chef. Customer arrival will be modeled to $W_k \sim Pois(\lambda)$ with $\lambda = 5$ and customer service time will be modeled by $S_k \sim Exp(\lambda)$ where $\lambda = 6$. 
+The first scenario considers a setting with 1 table and 1 chef. Customer
+arrival will be modeled to $W_k \sim Pois(\lambda)$ with $\lambda = 5$
+and customer service time will be modeled by $S_k \sim Exp(\lambda)$
+where $\lambda = 6$.
 
 -   $T_k$: Arrival time of the $k$th customer
 
@@ -28,6 +43,7 @@ The first scenario considers a setting with 1 table and 1 chef. Customer arrival
 $$
   W_k = T_k - T_{k-1}.
 $$
+
 ```{r packages, message=F, warning=F}
 library(tidyverse)
 library(lubridate)
@@ -42,7 +58,7 @@ opening_time_s1 <- "10:00"
 closing_time_s1 <- "22:00"
 total_time_s1 <- calc_total_time(opening_time_s1, closing_time_s1)
 
-arrival_rate_s1 <- 5 # customers per hour
+arrival_rate_s1 <- 20 # customers per hour
 arrival_times_s1 <- calc_simple_arrival_times(arrival_rate_s1, total_time_s1)
 
 #arrival_times_s1
@@ -51,12 +67,13 @@ arrival_times_s1 <- calc_simple_arrival_times(arrival_rate_s1, total_time_s1)
 
 ### Arrival Times
 
-In this simulation, on average, the number of customers arriving is 5 per hour, so around every 12 minutes. The number of customers that will be arriving within
-the operating hours is `r length(arrival_times_s1)`, with the first
-customer arriving `r floor(min(arrival_times_s1))` minutes after opening at 10:15 AM
-and the last customer arriving
-`r ceiling(total_time_s1 - max(arrival_times_s1))` minutes before closing at 8:54 PM. 
-
+In this simulation, on average, the number of customers arriving is 5
+per hour, so around every 12 minutes. The number of customers that will
+be arriving within the operating hours is `r length(arrival_times_s1)`,
+with the first customer arriving `r floor(min(arrival_times_s1))`
+minutes after opening at 10:15 AM and the last customer arriving
+`r ceiling(total_time_s1 - max(arrival_times_s1))` minutes before
+closing at 8:54 PM.
 
 ```{r arrival-times}
 
@@ -147,11 +164,11 @@ scen1_sim_results <- data.frame(
   Service_Start = service_start,
   Service_End = service_end,
   Waiting_Time = waiting_times_s1,
-  Time = time_of_day_s1
+  Time = time_of_day_s1,
+  Arrival_time = arrival_times_s1
 )
 
 ```
-
 
 ```{r service-times-graph, out.height= "30%"}
 
@@ -186,8 +203,12 @@ print(summary_stats_service_times)
 
 ```
 
-The median service time is `r round(median(service_times_s1))` minutes, with the shortest service time being `r round(min(service_times_s1))` and the longest service time being `r round(max(service_times_s1))`, which appears to be an outlier. Overall, the data is skewed right, consistent with an exponential distribution, and this indicates that service times tend to be quick.
-
+The median service time is `r round(median(service_times_s1))` minutes,
+with the shortest service time being `r round(min(service_times_s1))`
+and the longest service time being `r round(max(service_times_s1))`,
+which appears to be an outlier. Overall, the data is skewed right,
+consistent with an exponential distribution, and this indicates that
+service times tend to be quick.
 
 ```{r waiting-times-dist, out.height= "30%"}
 
@@ -223,8 +244,13 @@ print(summary_stats_waiting_times)
 
 ```
 
-The median waiting time is `r round(median(waiting_times_s1))` minutes, with the lowest waiting time being `r round(min(waiting_times_s1))` and the highest waiting time being `r round(max(waiting_times_s1))`. Overall, waiting times tends to be fairly symmetric with a slight positive skew and there are no visible outliers. Wait times are spread out with times being, on average, `r round(sd(waiting_times_s1))` minutes from the mean of `r round(mean(waiting_times_s1))` minutes. 
-
+The median waiting time is `r round(median(waiting_times_s1))` minutes,
+with the lowest waiting time being `r round(min(waiting_times_s1))` and
+the highest waiting time being `r round(max(waiting_times_s1))`.
+Overall, waiting times tends to be fairly symmetric with a slight
+positive skew and there are no visible outliers. Wait times are spread
+out with times being, on average, `r round(sd(waiting_times_s1))`
+minutes from the mean of `r round(mean(waiting_times_s1))` minutes.
 
 ```{r info-together}
 head(scen1_sim_results, 10)
@@ -232,19 +258,15 @@ head(scen1_sim_results, 10)
 #print(scen1_sim_results)
 ```
 
-
 ```{r, out.height= "30%"}
 
 #Label for 30 min interval
-breaks <- seq(30, 720, by = 30)
-labels <- sprintf("%02d:%02d", 10 + breaks %/% 60, breaks %% 60) 
+breaks <- seq(0, 720, by = 60)
 
-ggplot(scen1_sim_results, aes(x = Time, y = Waiting_Time)) +
+ggplot(scen1_sim_results, aes(x = Arrival_time, y = Waiting_Time)) +
   geom_point(color = "blue", size = 2, alpha = 0.6) +
-    scale_x_discrete(
-    breaks = breaks, 
-    labels = labels
-  ) +
+    scale_x_continuous(
+    breaks = breaks) +
   labs(
     title = "Waiting Time versus Time of Day",
     x = "Time of Day",
@@ -256,20 +278,30 @@ ggplot(scen1_sim_results, aes(x = Time, y = Waiting_Time)) +
   )
 
 ```
-Overall, waiting times appear to be highest around noon or lunch when customer satisfication is lowest. Waiting times decrease steadily 3 pm onwards until closing, suggesting a less busy dinner time where the restaurant has more down time. In our simulation, the maximum service time, 73 minutes, occured an hour before the rush hour, and as a result, waiting times increased significantly after this customer. Although overall service times are fairly quick, the restaurant should do their best to ensure service times are just as fast or even faster during the busy hours. 
+
+Overall, waiting times appear to be highest around noon or lunch when
+customer satisfication is lowest. Waiting times decrease steadily 3 pm
+onwards until closing, suggesting a less busy dinner time where the
+restaurant has more down time. In our simulation, the maximum service
+time, 73 minutes, occured an hour before the rush hour, and as a result,
+waiting times increased significantly after this customer. Although
+overall service times are fairly quick, the restaurant should do their
+best to ensure service times are just as fast or even faster during the
+busy hours.
 
 ## Scenario 2
 
 Assumptions:
 
-1.  5 dining tables and L chefs with operating hours 10am - 10pm. We choose here that L = 2
+1.  5 dining tables and L chefs with operating hours 10am - 10pm. We
+    choose here that L = 2
 
 2.  each table only seats one customer
 
 3.  service time modeled by an exponential distribution with rate λS =
     3L, so that the more chefs there are, the faster the service times
     become
-    
+
 4.  24 customers arrive every hour
 
 ```{r arrival-service-2}
@@ -391,11 +423,14 @@ Assumptions:
 
 3.  Each table cost \$1000 per day (extra service cost, rent, etc.)
 
-4.  For customers who waited more than 30 minutes, they earn the restaurant half the amount of customers who didn't.
+4.  For customers who waited more than 30 minutes, they earn the
+    restaurant half the amount of customers who didn't.
 
 #### Maximizing Profits
 
-With 5 tables, 24 customers arriving per hour, and these dollar amounts, how many chefs should we hire? We will run our simulation 100 times with 1 to 5 chefs on staff, to see which will maximize the expected profit.
+With 5 tables, 24 customers arriving per hour, and these dollar amounts,
+how many chefs should we hire? We will run our simulation 100 times with
+1 to 5 chefs on staff, to see which will maximize the expected profit.
 
 ```{r}
 
@@ -433,15 +468,18 @@ df |>
 
 ## Scenario 3
 
-To make the simulation more realistic, we have a third scenario. 
+To make the simulation more realistic, we have a third scenario.
 
-Assumptions:
-1. Open at 10am, close at 10pm
-2. From 12pm to 2pm and 6pm to 8pm, 60 customers arrive every hour. Otherwise, 6 arrive every hour.
-3. Instead of simulating service times with Exp(\lambda) where \lambda = 3 times the number of chefs, we do \lambda = ln(chefs + 1), so that additional chefs beyond 2 make more of an impact.
-4. Each customer will sit for a minimum of 45 minutes. This flat value will be added to the simulated service time, and is unaffected by staffing.
-5. In the profit calculation, there is a cost of adding additional tables (which are now variable), which is \$40 per table.
-6. Chefs still cost \$40 per hour to hire, and each customer earns \$50.
+Assumptions: 1. Open at 10am, close at 10pm 2. From 12pm to 2pm and 6pm
+to 8pm, 60 customers arrive every hour. Otherwise, 6 arrive every hour.
+3. Instead of simulating service times with Exp(\lambda) where \lambda =
+3 times the number of chefs, we do \lambda = ln(chefs + 1), so that
+additional chefs beyond 2 make more of an impact. 4. Each customer will
+sit for a minimum of 45 minutes. This flat value will be added to the
+simulated service time, and is unaffected by staffing. 5. In the profit
+calculation, there is a cost of adding additional tables (which are now
+variable), which is \$40 per table. 6. Chefs still cost \$40 per hour to
+hire, and each customer earns \$50.
 
 ### Arrival Times
 
