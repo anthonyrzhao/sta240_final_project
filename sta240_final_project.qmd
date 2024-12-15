@@ -55,7 +55,7 @@ In this simulation, on average, the number of customers arriving is 5 per hour, 
 the operating hours is `r length(arrival_times_s1)`, with the first
 customer arriving `r floor(min(arrival_times_s1))` minutes after opening at 10:15 AM
 and the last customer arriving
-`r ceiling(total_time_s1 - max(arrival_times_s1))` minutes before closing at 8:54 PM. The table below provides arrival times for the first seven customers. 
+`r ceiling(total_time_s1 - max(arrival_times_s1))` minutes before closing at 8:54 PM. 
 
 
 ```{r arrival-times}
@@ -81,7 +81,7 @@ time_table <- data.frame(
   Time= time_of_day_s1
 )
 
-head(time_table, 7)
+# head(time_table, 7)
 
 ```
 
@@ -153,7 +153,7 @@ scen1_sim_results <- data.frame(
 ```
 
 
-```{r service-times-graph}
+```{r service-times-graph, out.height= "30%"}
 
 boxplot <- scen1_sim_results %>%
   ggplot(aes(x= Service_Length)) +
@@ -169,7 +169,9 @@ boxplot <- scen1_sim_results %>%
     plot.title = element_text(hjust = 0.5) 
   )
 
-grid.arrange(boxplot, widths = c(0.5))
+boxplot
+
+# grid.arrange(boxplot, widths = c(0.5))
 
 summary_stats_service_times <- scen1_sim_results %>%
   summarize(
@@ -187,9 +189,9 @@ print(summary_stats_service_times)
 The median service time is `r round(median(service_times_s1))` minutes, with the shortest service time being `r round(min(service_times_s1))` and the longest service time being `r round(max(service_times_s1))`, which appears to be an outlier. Overall, the data is skewed right, consistent with an exponential distribution, and this indicates that service times tend to be quick.
 
 
-```{r waiting-times-dist}
+```{r waiting-times-dist, out.height= "30%"}
 
-boxplot2 <- scen1_sim_results %>% 
+boxplot2 <- scen1_sim_results %>%
   ggplot(aes(x= Waiting_Time)) +
   geom_boxplot() +
   labs(
@@ -198,12 +200,14 @@ boxplot2 <- scen1_sim_results %>%
   ) +
   theme_minimal() +
   theme(
-    axis.text.y = element_blank(),    
+    axis.text.y = element_blank(),
     axis.ticks.y = element_blank(),
-    plot.title = element_text(hjust = 0.5) 
+    plot.title = element_text(hjust = 0.5)
   )
 
-grid.arrange(boxplot2, widths = c(0.5))
+boxplot2
+
+# grid.arrange(boxplot2, widths = c(0.5))
 
 summary_stats_waiting_times <- scen1_sim_results %>%
   summarize(
@@ -219,17 +223,17 @@ print(summary_stats_waiting_times)
 
 ```
 
-On average, the waiting time is `r round(median(waiting_times_s1))` minutes, with the lowest waiting time being `r round(min(waiting_times_s1))` and the highest waiting time being `r round(max(waiting_times_s1))`. Overall, waiting times tends to be fairly symmetric with a slight positive skew and there are no visible outliers. Wait times are spread out with times being, on average, `r round(sd(waiting_times_s1))` minutes from the mean of `r round(mean(waiting_times_s1))` minutes. 
+The median waiting time is `r round(median(waiting_times_s1))` minutes, with the lowest waiting time being `r round(min(waiting_times_s1))` and the highest waiting time being `r round(max(waiting_times_s1))`. Overall, waiting times tends to be fairly symmetric with a slight positive skew and there are no visible outliers. Wait times are spread out with times being, on average, `r round(sd(waiting_times_s1))` minutes from the mean of `r round(mean(waiting_times_s1))` minutes. 
 
 
 ```{r info-together}
 head(scen1_sim_results, 10)
 
-# print(scen1_sim_results)
+#print(scen1_sim_results)
 ```
 
 
-```{r}
+```{r, out.height= "30%"}
 
 #Label for 30 min interval
 breaks <- seq(30, 720, by = 30)
@@ -254,7 +258,7 @@ ggplot(scen1_sim_results, aes(x = Time, y = Waiting_Time)) +
 ```
 Overall, waiting times appear to be highest around noon or lunch when customer satisfication is lowest. Waiting times decrease steadily 3 pm onwards until closing, suggesting a less busy dinner time where the restaurant has more down time. In our simulation, the maximum service time, 73 minutes, occured an hour before the rush hour, and as a result, waiting times increased significantly after this customer. Although overall service times are fairly quick, the restaurant should do their best to ensure service times are just as fast or even faster during the busy hours. 
 
-# Scenario 2
+## Scenario 2
 
 Assumptions:
 
@@ -281,7 +285,7 @@ num_chefs_s2 <- 2 # we only have two chefs
 service_times_s2 <- calc_simple_service_times(arrival_times_s2, num_chefs_s2)
 ```
 
-## Waiting Times
+### Waiting Times
 
 To model waiting times, we iterate through the day minute by minute.
 
@@ -375,7 +379,7 @@ scen2_sim_results_by_minute |>
 
 ```
 
-## Restaurant Profits
+### Restaurant Profits
 
 Assumptions:
 
@@ -389,7 +393,7 @@ Assumptions:
 
 4.  For customers who waited more than 30 minutes, they earn the restaurant half the amount of customers who didn't.
 
-### Maximizing Profits
+#### Maximizing Profits
 
 With 5 tables, 24 customers arriving per hour, and these dollar amounts, how many chefs should we hire? We will run our simulation 100 times with 1 to 5 chefs on staff, to see which will maximize the expected profit.
 
@@ -427,7 +431,7 @@ df |>
 
 ```
 
-# Scenario 3
+## Scenario 3
 
 To make the simulation more realistic, we have a third scenario. 
 
@@ -439,7 +443,7 @@ Assumptions:
 5. In the profit calculation, there is a cost of adding additional tables (which are now variable), which is \$40 per table.
 6. Chefs still cost \$40 per hour to hire, and each customer earns \$50.
 
-## Arrival Times
+### Arrival Times
 
 ```{r}
 
@@ -469,7 +473,7 @@ ggplot(data = data.frame(arrival_times_s3), aes(x = arrival_times_s3)) +
   theme_minimal()
 ```
 
-## Maximizing Profits
+### Maximizing Profits
 
 Under this scenario, how can we maximize profits?
 
