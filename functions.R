@@ -98,7 +98,7 @@ restaurant_sim <- function(arrivals, services, tables, minutes) {
   
   # set up tracking
   arrival_times_temp <- arrivals
-
+  
   queue_size_history <- numeric(minutes)
   
   # number of tables occupied each minute
@@ -179,8 +179,8 @@ restaurant_sim <- function(arrivals, services, tables, minutes) {
 }
 
 summarize_resturant_sim_s2 <- function(waiting_times, queue_size_history, 
-                                    occupied_tables_history, chefs, 
-                                    minutes, tables) {
+                                       occupied_tables_history, chefs, 
+                                       minutes, tables) {
   # calculate outputs (the things we actually care about) from the simulation
   
   # average waiting time across all customers
@@ -197,7 +197,9 @@ summarize_resturant_sim_s2 <- function(waiting_times, queue_size_history,
   num_customers <- length(waiting_times)
   #profit
   profit <- 50*num_customers - (40/60)*chefs*as.numeric(minutes) - 1000*tables - 25*long_waits
-  
+  # downtime proportion
+  downtime_minutes <- sum(unlist(occupied_tables_history) < (tables/2))
+  downtime_proportion <- downtime_minutes / as.numeric(minutes)
   # return all of it, as a data frame with one row
   sim_output <- data.frame(
     total_customers = num_customers,
@@ -208,7 +210,8 @@ summarize_resturant_sim_s2 <- function(waiting_times, queue_size_history,
     long_waits = long_waits,
     avg_queue_length = avg_queue_length,
     max_queue_length = max_queue_length,
-    avg_tables_occupied = avg_tables_occupied
+    avg_tables_occupied = avg_tables_occupied,
+    downtime_proportion = downtime_proportion
   )
   
   return(sim_output)
@@ -233,6 +236,9 @@ summarize_resturant_sim_s3 <- function(waiting_times, queue_size_history,
   num_customers <- length(waiting_times)
   #profit
   profit <- 50*num_customers - (40/60)*chefs*as.numeric(minutes) - 80*tables - 25*long_waits
+  # downtime proportion
+  downtime_minutes <- sum(unlist(occupied_tables_history) < (tables/2))
+  downtime_proportion <- downtime_minutes / as.numeric(minutes)
   
   # return all of it, as a data frame with one row
   sim_output <- data.frame(
@@ -244,12 +250,9 @@ summarize_resturant_sim_s3 <- function(waiting_times, queue_size_history,
     long_waits = long_waits,
     avg_queue_length = avg_queue_length,
     max_queue_length = max_queue_length,
-    avg_tables_occupied = avg_tables_occupied
+    avg_tables_occupied = avg_tables_occupied,
+    downtime_proportion = downtime_proportion
   )
   
   return(sim_output)
 }
-  
-  
-  
-  

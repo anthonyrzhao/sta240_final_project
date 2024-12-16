@@ -52,7 +52,7 @@ opening_time_s1 <- "10:00"
 closing_time_s1 <- "22:00"
 total_time_s1 <- calc_total_time(opening_time_s1, closing_time_s1)
 
-arrival_rate_s1 <- 5 # customers per hour
+arrival_rate_s1 <- 10 # customers per hour
 arrival_times_s1 <- calc_simple_arrival_times(arrival_rate_s1, total_time_s1)
 
 arrival_times_s1
@@ -169,18 +169,24 @@ head(scen1_sim_results, 5)
 
 ### Serving and Waiting Times Analysis
 
-```{r service-times-graph}
+```{r service-times-graph, fig.height=2}
 
 scen1_sim_results %>%
   ggplot(aes(x= service_length)) +
   geom_boxplot() +
   labs(
     x= "Minutes",
-    title = "Service Times"
+    title = "Distribution of Service Times"
   ) +
-  theme_minimal()
-
-mean(service_times_s1)
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  theme_bw() +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title = element_text(size = 13),
+    axis.text = element_text(size = 13),
+    plot.title = element_text(size = 13, hjust = 0.5)
+  )
 
 ```
 
@@ -188,7 +194,7 @@ The average service time is `r round(mean(service_times_s1))` minutes,
 with the data skewed right, consistent with an exponential distribution.
 This indicates that service times tend to lower.
 
-```{r waiting-times-dist}
+```{r waiting-times-dist, fig.height=2}
 
 scen1_sim_results %>% 
   ggplot(aes(x= waiting_time)) +
@@ -197,32 +203,42 @@ scen1_sim_results %>%
     x= "Minutes",
     title = "Waiting Times"
   ) +
-  theme_minimal()
-
-mean(waiting_times_s1)
-
+  theme_bw() +
+  scale_x_continuous(breaks = seq(0, 500, by = 50)) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title = element_text(size = 13),
+    axis.text = element_text(size = 13),
+    plot.title = element_text(size = 13, hjust = 0.5),
+    panel.grid.minor = element_blank()
+  )
 
 ```
 
 Waiting times tends to be slightly right-skewed and on average, the
 waiting time is `r round(mean(waiting_times_s1))` minutes.
 
-```{r}
-
-#Label for 30 min interval
-breaks <- seq(0, 720, by = 60)
+```{r fig.height=3}
 
 ggplot(scen1_sim_results, aes(x = arrival_time, y = waiting_times_s1)) +
   geom_point(color = "blue", size = 2, alpha = 0.6) +
     scale_x_continuous(
-    breaks = breaks
+    breaks = seq(0, 720, by = 60)
   ) +
   labs(
-    title = "Scatter Plot",
+    title = "Customer Waiting Times by Arrival Time",
     x = "Minutes after Opening",
-    y = "Waiting Time"
+    y = "Waiting Time (Minutes)"
   ) +
-  theme_minimal()
+  theme_bw() +
+  scale_y_continuous(breaks = seq(0, 500, by = 50)) +
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 14, hjust = 0.5),
+    panel.grid.minor = element_blank()
+  )
 
 ```
 
@@ -274,7 +290,7 @@ how many chefs should we hire? We will run our simulation 100 times with
 
 ```{r}
 num_tables_s2 <- 5
-df <- numeric(9)
+df <- numeric(10)
 
 for(b in 1:5) {
     num_chefs_s2 <- b
@@ -301,7 +317,11 @@ df |>
   theme_bw() +
   labs(
     x = "Number of Chefs",
-    y = "Average Profit"
+    y = "Average Profit (Dollars)"
+  ) +
+  theme(
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 14)
   )
 
 ```
@@ -310,14 +330,19 @@ df |>
 
 df |>
   group_by(num_chefs) |>
-  summarise(mean = mean(avg_waiting_time), sd = sd(avg_waiting_time)) |>
+  summarise(mean = mean(long_waits/total_customers), sd = sd(long_waits/total_customers)) |>
   ggplot(aes(x = num_chefs, y = mean)) +
   geom_bar(stat = "identity", fill = "darkgreen") +
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2) +
   theme_bw() +
+  scale_y_continuous(limits = c(0, 1)) +
   labs(
     x = "Number of Chefs",
-    y = "Average Waiting Time"
+    y = "Proportion of Long Waits"
+  ) +
+  theme(
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 14)
   )
 
 ```
@@ -333,7 +358,11 @@ df |>
   theme_bw() +
   labs(
     x = "Number of Chefs",
-    y = "Average Quene Length"
+    y = "Average Queue Length"
+  ) +
+  theme(
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 14)
   )
 ```
 
@@ -341,83 +370,20 @@ df |>
 
 df |>
   group_by(num_chefs) |>
-  summarise(mean = mean(avg_tables_occupied), sd = sd(avg_tables_occupied)) |>
+  summarise(mean = mean(downtime_proportion), sd = sd(downtime_proportion)) |>
   ggplot(aes(x = num_chefs, y = mean)) +
   geom_bar(stat = "identity", fill = "darkgreen") +
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2) +
   theme_bw() +
+  scale_y_continuous(limits = c(0, 1)) +
   labs(
     x = "Number of Chefs",
-    y = "Average Number of Table Occupied"
+    y = "Downtime Proportion"
+  )  +
+  theme(
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 14)
   )
-```
-
-## Case Study with Maximum Profit (3 chefs) Scenario 2
-
-To model waiting times, we iterate through the day minute by minute.
-
-```{r case-study max profit 1 chef}
-num_chefs_s2 <- 3 # we only have 1 chef for the best profit scenario
-service_times_s2 <- calc_simple_service_times(arrival_times_s2, num_chefs_s2)
-num_tables_s2 <- 5
-```
-
-```{r waiting-2}
-sim_s2 <- restaurant_sim(arrival_times_s2, service_times_s2, num_tables_s2, total_time_s2)
-
-scen2_sim_results_by_customer <- data.frame(
-  customer = 1:length(arrival_times_s2),
-  arrival_time = arrival_times_s2,
-  service_length = service_times_s2,
-  waiting_time = sim_s2$waiting_times
-)
-
-scen2_sim_results_by_minute <- data.frame(
-  minutes_since_opening = 1:total_time_s2,
-  queue_size = sim_s2$queue_size_history,
-  occupied_tables = sim_s2$occupied_tables_history
-)
-```
-
-```{r scen2-plot-waiting-time-distribution}
-scen2_sim_results_by_customer |>
-  ggplot(aes(x = waiting_time)) +
-  geom_boxplot() +
-  labs(
-    x= "Minutes",
-    title = "Waiting Times"
-  ) +
-  theme_minimal()
-
-
-```
-
-```{r scen2-plot-waiting-time-over-day}
-scen2_sim_results_by_customer |>
-  ggplot(aes(x = arrival_time, y = waiting_time)) +
-  geom_point(size = 2, alpha = 0.6) +
-  scale_x_continuous(breaks = seq(0, as.numeric(total_time_s2), by = 60)) +
-  labs(
-    x = "Minutes Since Opening",
-    y = "Waiting time of Customer"
-  ) +
-  theme_minimal() +
-  theme(panel.grid.minor = element_blank())
-```
-
-```{r scen2-plot-occupied-table-over-day}
-scen2_sim_results_by_minute |>
-  ggplot(aes(x = minutes_since_opening, y = occupied_tables)) +
-  geom_area(fill = "lightblue") +
-  geom_line() +
-  scale_y_continuous(breaks = seq(1, num_tables_s2, by = 1)) +
-  scale_x_continuous(breaks = seq(0, as.numeric(total_time_s2), by = 60)) +
-  labs(
-    x = "Minutes Since Opening",
-    y = "Number of Tables Occupied"
-  ) +
-  theme_minimal() +
-  theme(panel.grid.minor = element_blank())
 ```
 
 # Scenario 3
@@ -437,7 +403,7 @@ hire, and each customer earns \$50.
 
 ## Arrival Times
 
-```{r}
+```{r fig.width=7.5, fig.height=3}
 
 opening_time_s3 <- "10:00"
 closing_time_s3 <- "22:00"
@@ -455,14 +421,21 @@ arrival_times_s3 <- calc_realistic_arrival_times(
 ggplot(data = data.frame(arrival_times_s3), aes(x = arrival_times_s3)) +
   geom_histogram(binwidth = 10, fill = "blue", color = "black", alpha = 0.7) +
   labs(
-    title = "Histogram of Customer Arrival Times",
-    x = "Time of Day (Hours)",
+    x = "Minutes After Opening",
     y = "Number of Arrivals"
   ) +
   scale_x_continuous(
     breaks = seq(0, 720, by = 60)
   ) +
-  theme_minimal()
+  scale_y_continuous(
+    breaks = seq(0, 25, by = 5)
+  ) +
+  theme_bw() +
+  theme(
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 14)
+  )
+    
 ```
 
 ## Maximizing Profits
@@ -471,12 +444,12 @@ Under this scenario, how can we maximize profits?
 
 ```{r}
 
-df <- numeric(9)
+df <- numeric(10)
 for(a in 1:5) {
   num_chefs_s3 = a
   for(b in seq(1, 101, by = 10)) {
     num_tables_s3 = b
-    for(i in 1:20) {
+    for(i in 1:100) {
       arrival_times_s3 <- calc_realistic_arrival_times(
         open = "10:00", close = "22:00",
         lunch_peak_start = "12:00",
@@ -494,75 +467,140 @@ for(a in 1:5) {
 df <- df[-1, ]
 ```
 
-```{r}
+```{r fig.width=9, fig.height=4.5}
 #Mean profit
 df |>
   group_by(num_chefs, num_tables) |>
   summarise(mean = mean(profit), sd = sd(profit)) |>
-  ggplot(aes(x = num_tables, y = num_chefs, fill = mean, text = sd)) +
-  geom_tile() +
-  scale_fill_gradient(low = "white", high = "darkgreen") +
+  ggplot(aes(x = num_tables, y = num_chefs, color = mean, size = sd)) +
+  geom_point() +
+  scale_color_gradient(low = "white", high = "darkred") +
   scale_x_continuous(
     breaks = seq(min(df$num_tables), ceiling(max(df$num_tables)), by = 10),
     labels = seq(min(df$num_tables), ceiling(max(df$num_tables)), by = 10)  
   ) +
   scale_y_continuous(
     breaks = seq(min(df$num_chefs), ceiling(max(df$num_chefs)), by = 1),
-    labels = seq(min(df$num_chefs), ceiling(max(df$num_chefs)), by = 1)  
+    labels = seq(min(df$num_chefs), ceiling(max(df$num_chefs)), by = 1),
+    expand = expansion(mult = c(0.1, 0.1))
+  ) +
+  scale_size_continuous(
+    range = c(2, 16)
   ) +
   theme_bw() +
-  theme(panel.grid.minor = element_blank()) +
+  theme(
+    panel.grid = element_blank(),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    plot.margin = margin(t = 35, b = 15)
+  ) +
   labs(
     x = "Number of Tables",
     y = "Number of Chefs",
-    color = "Average profit (dollars)",
-    size = "SD between days"
+    color = "Average Daily Profit ($)",
+    size = "Standard Deviation of \nDaily Profit ($)"
   )
   
+df_summary <- df |>
+  group_by(num_chefs, num_tables) |>
+  summarise(
+    mean_profit = mean(profit), 
+    sd_profit = sd(profit),
+    mean_avg_waiting_time = mean(avg_waiting_time), 
+    sd_avg_waiting_time = sd(avg_waiting_time),
+    mean_long_waits = mean(long_waits),
+    sd_long_waits = sd(long_waits),
+    mean_avg_queue_length = mean(avg_queue_length),
+    sd_avg_queue_length = sd(avg_queue_length),
+    mean_max_queue_length = mean(max_queue_length),
+    sd_max_queue_length = sd(max_queue_length),
+    mean_avg_tables_occupied = mean(avg_tables_occupied),
+    sd_avg_tables_occupied = sd(avg_tables_occupied),
+    mean_downtime_proportion = mean(downtime_proportion),
+    sd_downtime_propotion = sd(downtime_proportion),
+    mean_long_waits_proportion = mean(long_waits / total_customers),
+    sd_long_waits_proportion = sd(long_waits / total_customers)
+  ) |>
+  ungroup() |>
+  arrange(mean_profit) |>
+  slice(1:5) |>
+  mutate(description = paste("Chefs:", num_chefs, "\n Tables:", num_tables))
+
+
+df_summary
 ```
 
-```{r}
-# PROFIT
-df |>
-  group_by(num_chefs, num_tables) |>
-  summarise(mean_profit = mean(profit), sd = sd(profit)) |>
-  arrange(desc(mean_profit)) |>
-  head(10)
+```{r scenario-3-plots, fig.height=4}
 
-# MEAN WAITING TIMES
-df |>
-  group_by(num_chefs, num_tables) |>
-  summarise(profit = mean(profit), mean_waiting_time = mean(avg_waiting_time), sd = sd(avg_waiting_time)) |>
-  arrange(desc(profit)) |>
-  head(3)
-  
+df_summary |>
+  ggplot(aes(x = reorder(description, -mean_profit), y = mean_long_waits_proportion)) +
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  geom_errorbar(aes(ymin = 0, ymax = mean_long_waits_proportion + sd_long_waits_proportion), width = 0.2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 16),
+    axis.text.y = element_text(size = 14)
+  ) +
+  labs(
+    x = "Scenario",
+    y = "Proportion of Long Waits"
+  )
 
-# MEAN NUMBER OF PEOPLE WHO HAVE TO WAIT MORE THAN 30 MINUTES
-df |>
-  group_by(num_chefs, num_tables) |>
-  summarise(profit = mean(profit), mean_long_waits = mean(long_waits), sd = sd(long_waits)) |>
-  arrange(desc(profit)) |>
-  head(3)
+df_summary |>
+  ggplot(aes(x = reorder(description, -mean_profit), y = mean_downtime_proportion)) +
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  geom_errorbar(aes(ymin = mean_downtime_proportion - sd_downtime_propotion, ymax = mean_downtime_proportion + sd_downtime_propotion), width = 0.2) +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 16),
+    axis.text.y = element_text(size = 14)
+  ) +
+  labs(
+    x = "Scenario",
+    y = "Daily Downtime Proportion"
+  )
 
-# MEAN QUEUE LENGTH
-df |>
-  group_by(num_chefs, num_tables) |>
-  summarise(profit = mean(profit), mean_queue_length = mean(avg_queue_length), sd = sd(avg_queue_length)) |>
-  arrange(desc(profit)) |>
-  head(3)
+df_summary |>
+  ggplot(aes(x = reorder(description, -mean_profit), y = mean_avg_queue_length)) +
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  geom_errorbar(aes(ymin = mean_avg_queue_length - sd_avg_queue_length, ymax = mean_avg_queue_length + sd_avg_queue_length), width = 0.2) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 16),
+    axis.text.y = element_text(size = 14)
+  ) +
+  labs(
+    x = "Scenario",
+    y = "Average Queue Length"
+  )
 
-# MEAN MAX QUEUE LENGTH FOR EACH DAY
-df |>
-  group_by(num_chefs, num_tables) |>
-  summarise(profit = mean(profit), mean_max_queue = mean(max_queue_length), sd = sd(max_queue_length)) |>
-  arrange(desc(profit)) |>
-  head(3)
-
-# MEAN TABLES OCCUPIED
-df |>
-  group_by(num_chefs, num_tables) |>
-  summarise(profit = mean(profit), mean_occupied = mean(avg_tables_occupied), sd = sd(avg_tables_occupied)) |>
-  arrange(desc(profit)) |>
-  head(3)
+df_summary |>
+  ggplot(aes(x = reorder(description, -mean_profit), y = mean_profit)) +
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  geom_errorbar(aes(ymin = mean_profit - sd_profit, ymax = mean_profit + sd_profit), width = 0.2) +
+  geom_text(aes(label = round(mean_profit, 0), vjust = 6), color = "white", size = 4.5) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 16),
+    axis.text.y = element_text(size = 14)
+  ) +
+  labs(
+    x = "Scenario",
+    y = "Daily Profit ($)"
+  )
 
 ```
